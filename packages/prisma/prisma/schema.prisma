@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Dag{
+    id String @id @default(uuid())
+    name String @unique
+    description String?
+    createdAt DateTime @default(now()) @map("created-at")
+    taskNodes TaskNode[]
+    dagRuns DagRun[]
+    @@map("dags")
+}
+
+model TaskNode{
+    id String @id @default(uuid())
+    dagId String @map("dag-id")
+    name String
+    handler String
+    retry Json?
+    dag Dag @relation(fields:[dagId],references:[id],onDelete:Cascade)
+    parentEdges TaskEdge[] @relation("ParentTask")
+    childEdges TaskEdge[] @relation("ChildTask")
+    taskInstances TaskInstance[]
+    @@unique([dagId,name])
+    @@map("task-nodes")
+}
+
+model TaskEdge{
+    dagId String @map("dag-id")
+    parentTaskId String @map("parent-task-id")
+    childTaskId String @map("child-task-id")
+    parentTask TaskNode @relation("ParentTask",fields:[parentTaskId],references:[id],onDelete:Cascade)
+    childTask TaskNode @relation("ChildTask",fields:[childTaskId],references:[id],onDelete:Cascade)
+    @@id([parentTaskId,childTaskId])
+    @@index([parentTaskId])
+    @@index([childTaskId])
+    @@map("task-edges")
+}
+
+model DagRun{
+    id String @id @default(uuid())
+    dagId String @map("dag-id")
+    status DagRunEnum @default(PENDING)
+    input Json?
+    startedAt DateTime? @map("started-at")
+    finishedAt DateTime? @map("finished-at")
+    createdAt DateTime @default(now()) @map("created-at")
+    dag Dag @relation(fields:[dagId],references:[id])
+    taskInstances TaskInstance[]
+    @@map("dag-runs")
+}
+
+enum DagRunEnum{
+    PENDING
+    RUNNING
+    COMPLETED
+    FAILED
+}
+
+model TaskInstance{
+    id String @id @default(uuid())
+    dagRunId String @map("dag-run-id")
+    taskNodeId String @map("task-node-id")
+    status TaskInstanceEnum @default(WAITING)
+    remainingDependencies Int @default(0) @map("remaining-dependencies")
+    attemptNumber Int @default(0) @map("attempt-number")
+    result Json?
+    error String?
+    startedAt DateTime? @map("started-at")
+    finishedAt DateTime? @map("finished-at")
+    dagRun DagRun @relation(fields:[dagRunId],references:[id],onDelete:Cascade)
+    taskNode TaskNode @relation(fields:[taskNodeId],references:[id],onDelete:Cascade)
+    @@unique([dagRunId,taskNodeId])
+    @@index([status,remainingDependencies])
+    @@map("task-instances")
+}
+
+enum TaskInstanceEnum{
+    WAITING
+    READY
+    RUNNING
+    COMPLETED
+    FAILED
+}

@@ -1,0 +1,34 @@
+{
+	"name":"@repo/prisma",
+	"version":"0.0.0",
+	"private":true,
+	"type":"module",
+	"main":"./dist/index.js",
+	"types":"./dist/index.d.ts",
+	"exports":{
+		".":{
+			"types":"./dist/index.d.ts",
+			"default":"./dist/index.js"
+		}
+	},
+	"prisma":{
+		"schema":"./prisma/schema.prisma"
+	},
+	"scripts":{
+		"db:generate":"prisma generate",
+		"db:migrate":"prisma migrate dev",
+		"db:push":"prisma db push",
+		"build":"tsc -p tsconfig.json"
+	},
+	"devDependencies":{
+		"@repo/typescript-config":"workspace:*",
+		"@types/node":"^22.15.3",
+		"prisma":"^6.19.3",
+		"typescript":"^7.0.2"
+	},
+	"dependencies":{
+		"@prisma/client":"^6.19.3",
+		"pino":"^10.3.1",
+		"zod":"^4.4.3"
+	}
+}
