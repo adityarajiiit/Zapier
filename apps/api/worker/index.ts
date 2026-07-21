@@ -1,0 +1,40 @@
+export const handlers=new Map<string,(input:any)=>Promise<any>>([
+    [
+        "data.fetch",
+        async(input:any)=>{
+            return{
+                rows:10
+            }
+        }
+    ],
+    [
+        "data.process",
+        async(input:any)=>{
+            return{
+                processed:true
+            }
+        }
+    ],
+    [
+        "email.send",
+        async(input:any)=>{
+            return{
+                sent:true
+            }
+        }
+    ],
+    [
+        "dashboard.update",
+        async(input:any)=>{
+            return{
+                updated:true
+            }
+        }
+    ],
+    [
+        "all.fail",
+        async(input:any)=>{
+            throw new Error("error")
+        }
+    ]
+])

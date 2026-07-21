@@ -22,7 +22,7 @@ model TaskNode{
     dagId String @map("dag-id")
     name String
     handler String
-    retry Json?
+    retry Json
     dag Dag @relation(fields:[dagId],references:[id],onDelete:Cascade)
     parentEdges TaskEdge[] @relation("ParentTask")
     childEdges TaskEdge[] @relation("ChildTask")
