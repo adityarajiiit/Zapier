@@ -18,4 +18,4 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 export { logger, createLogger };
-export type { Prisma } from '@prisma/client';
+export * from '@prisma/client';

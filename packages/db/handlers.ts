@@ -36,5 +36,14 @@ export const handlers=new Map<string,(input:any)=>Promise<any>>([
         async(input:any)=>{
             throw new Error("error")
         }
+    ],
+    [
+        "test.slow",
+        async(input:any)=>{
+            await new Promise((r)=>setTimeout(r,10000))
+            return{
+                slow:true
+            }
+        }
     ]
 ])

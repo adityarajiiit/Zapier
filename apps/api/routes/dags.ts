@@ -1,7 +1,7 @@
 import { z } from "zod"
 import {FastifyInstance} from "fastify"
 import {prisma} from "@repo/prisma"
-import { dagsController } from "../controllerts/dags.controller"
+import { dagsController } from "../controllerts/dags.controller.js"
 const dagsSchema=z.object({
     name:z.string().min(1),
     description:z.string().optional(),

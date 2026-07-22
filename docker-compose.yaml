@@ -1,0 +1,11 @@
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://postgres:asusvivobook@localhost:5432/postgres
+      - LOG_LEVEL=info
+    network_mode: "host"
+    deploy:
+      replicas: 5

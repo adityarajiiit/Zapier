@@ -23,7 +23,7 @@ const dagRunSchema=z.object({
 })
 export const dagsController={
     createDag:async(request:any,reply:any)=>{
-        const parsed=dagsSchema.safeParse(request.query)
+        const parsed=dagsSchema.safeParse(request.body)
         if(!parsed.success){
             return reply.status(400).send({
                 status:'error',
@@ -52,11 +52,11 @@ export const dagsController={
             graph.get(edge.from)?.push(edge.to)
         }
         const queue:string[]=[]
-        for(const [task,deg] of indegree.entries()){
+        indegree.forEach((deg, task) => {
             if(deg===0){
                 queue.push(task)
             }
-        }
+        })
         let count=0
         while(queue.length>0){
             const task=queue.shift()!
@@ -110,7 +110,7 @@ export const dagsController={
         })
     },
     runDag:async(request:any,reply:any)=>{
-        const parsed=dagRunSchema.safeParse(request.query)
+        const parsed=dagRunSchema.safeParse(request.body)
         if(!parsed.success){
             return reply.status(400).send({
                 status:'error',

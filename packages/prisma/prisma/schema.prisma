@@ -74,6 +74,7 @@ model TaskInstance{
     error String?
     startedAt DateTime? @map("started-at")
     finishedAt DateTime? @map("finished-at")
+    rent TaskRent?
     dagRun DagRun @relation(fields:[dagRunId],references:[id],onDelete:Cascade)
     taskNode TaskNode @relation(fields:[taskNodeId],references:[id],onDelete:Cascade)
     @@unique([dagRunId,taskNodeId])
@@ -87,4 +88,14 @@ enum TaskInstanceEnum{
     RUNNING
     COMPLETED
     FAILED
+}
+
+model TaskRent{
+    taskInstanceId String @id @map("task-instance-id")
+    workerId String @map("worker-id")
+    executionId BigInt @default(autoincrement()) @map("execution-id")
+    acquiredAt DateTime @default(now()) @map("acquired-at")
+    expiresAt DateTime @map("expires-at")
+    taskInstance TaskInstance @relation(fields:[taskInstanceId],references:[id],onDelete:Cascade)
+    @@map("task-rents")
 }

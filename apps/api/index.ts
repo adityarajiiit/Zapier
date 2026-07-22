@@ -1,8 +1,8 @@
 import {prisma} from "@repo/prisma"
 import fastify from "fastify"
 import cors from "@fastify/cors"
-import {healthRoutes} from "./routes/health"
-import {dagsRoutes} from "./routes/dags"
+import {healthRoutes} from "./routes/health.js"
+import {dagsRoutes} from "./routes/dags.js"
 const app=fastify()
 await app.register(cors)
 await healthRoutes(app)
