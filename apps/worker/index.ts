@@ -1,8 +1,11 @@
-import{prisma} from "@repo/prisma"
+import { prisma } from "@repo/prisma"
 import * as os from "os"
-import {startPollingLoop} from "./utils/loop.js"
+import { startPollingLoop } from "./utils/loop.js"
+import { integration } from "@repo/integrations"
+import "@repo/engine"
 const workerId=`${os.hostname()}-${process.pid}`
 console.log(`${workerId} started`)
+await integration.seed()
 const interval=startPollingLoop(workerId)
 async function shutdown() {
     console.log(`${workerId} shutting down`)
@@ -10,5 +13,5 @@ async function shutdown() {
     await prisma.$disconnect()
     process.exit(0)
 }
-process.on("SIGINT",shutdown)
-process.on("SIGTERM",shutdown)
+process.on("SIGINT", shutdown)
+process.on("SIGTERM", shutdown)

@@ -9,3 +9,13 @@ services:
     network_mode: "host"
     deploy:
       replicas: 5
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: always
+    volumes:
+      - redisdata:/data
+
+volumes:
+  redisdata:

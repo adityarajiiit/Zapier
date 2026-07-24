@@ -1,30 +1,46 @@
-import {prisma,TaskInstance} from "@repo/prisma";
-export const claimTask=async(workerId:string)=>{
-    const [claimed]=await prisma.$queryRaw<TaskInstance[]>`
-    UPDATE "task-instances"
-    SET
-      status='RUNNING'::"TaskInstanceEnum",
-      "started-at"=NOW(),
-      "attempt-number"="attempt-number"+1
-    WHERE id=(
-    SELECT id FROM "task-instances"
-    WHERE status='READY'::"TaskInstanceEnum"
-    AND "remaining-dependencies"=0
-    ORDER BY "dag-run-id","task-node-id"
-    FOR UPDATE SKIP LOCKED
-    LIMIT 1
+import{prisma} from "@repo/prisma"
+
+export const claimStep=async(workerId:string)=>{
+    const rows=await prisma.$queryRaw<any>`
+    WITH nextstep AS (
+        SELECT sr.id
+        FROM "step-results" sr
+        WHERE sr.status='PENDING'::"StepStatus"
+          AND NOT EXISTS(
+            SELECT 1
+            FROM "step-results" sr2
+            WHERE sr2."execution-id"=sr."execution-id"
+              AND sr2.status='RUNNING'::"StepStatus"
+          )
+        ORDER BY sr."step-order" ASC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED    
     )
-    RETURNING *
+    UPDATE "step-results"
+    SET
+      status='RUNNING'::"StepStatus",
+      "started-at"=NOW(),
+      "attempt-number"="step-results"."attempt-number"+1
+      WHERE id=(SELECT id FROM nextstep)
+      RETURNING id
     `
-    if(!claimed){
+    if(!rows||rows.length===0){
         return null
     }
-    const task=await prisma.taskInstance.findUnique({
+    const stepId=rows[0].id
+    const fullStep=await prisma.stepResult.findUnique({
         where:{
-            id:claimed.id
+            id:stepId
         },
-        include:{taskNode:true,dagRun:true}
+        include:{
+            execution:true,
+            workflowStep:{
+                include:{
+                    action:true,
+                    credential:true
+                }
+            }
+        }
     })
-    return task
+    return fullStep
 }
-

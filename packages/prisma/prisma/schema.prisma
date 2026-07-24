@@ -7,95 +7,222 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Dag{
-    id String @id @default(uuid())
-    name String @unique
-    description String?
-    createdAt DateTime @default(now()) @map("created-at")
-    taskNodes TaskNode[]
-    dagRuns DagRun[]
-    @@map("dags")
-}
-
-model TaskNode{
-    id String @id @default(uuid())
-    dagId String @map("dag-id")
+model User{
+    id String @id @default(uuid()) 
     name String
-    handler String
-    retry Json
-    dag Dag @relation(fields:[dagId],references:[id],onDelete:Cascade)
-    parentEdges TaskEdge[] @relation("ParentTask")
-    childEdges TaskEdge[] @relation("ChildTask")
-    taskInstances TaskInstance[]
-    @@unique([dagId,name])
-    @@map("task-nodes")
+    email String @unique
+    emailVerified DateTime? @map("email-verified")
+    image String?
+    createdAt DateTime @default(now()) @map("created-at")
+    updatedAt DateTime @updatedAt @map("updated-at")
+    accounts Account[]
+    sessions Session[]
+    workflows Workflow[]
+    credentials Credential[]
+    @@map("users")
 }
 
-model TaskEdge{
-    dagId String @map("dag-id")
-    parentTaskId String @map("parent-task-id")
-    childTaskId String @map("child-task-id")
-    parentTask TaskNode @relation("ParentTask",fields:[parentTaskId],references:[id],onDelete:Cascade)
-    childTask TaskNode @relation("ChildTask",fields:[childTaskId],references:[id],onDelete:Cascade)
-    @@id([parentTaskId,childTaskId])
-    @@index([parentTaskId])
-    @@index([childTaskId])
-    @@map("task-edges")
-}
-
-model DagRun{
+model Account{
     id String @id @default(uuid())
-    dagId String @map("dag-id")
-    status DagRunEnum @default(PENDING)
+    userId String @map("user-id")
+    user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+    type String
+    provider String
+    providerAccountId String @map("provider-account-id")
+    refresh_token String?
+    access_token String?
+    expires_at Int?
+    token_type String?
+    scope String?
+    id_token String?
+    session_state String?
+    @@unique([provider,providerAccountId])
+    @@map("accounts")
+}
+
+model Session{
+    id String @id @default(uuid())
+    sessionToken String @unique @map("session-token")
+    userId String @map("user-id")
+    user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+    expires DateTime
+    @@map("sessions")
+}
+
+model VerificationToken{
+    email String
+    token String @unique
+    expires DateTime
+    @@unique([email,token])
+    @@map("verification_tokens")
+}
+
+model Integration{
+    id String @id @default(uuid())
+    name String
+    description String?
+    icon String?
+    authType AuthType @map("auth-type")
+    isEnabled Boolean @default(true) @map("is-enabled")
+    createdAt DateTime @default(now()) @map("created-at")
+    triggers Trigger[]
+    actions Action[]
+    credentials Credential[]
+    @@map("integrations")
+}
+
+enum AuthType{
+    OAUTH2
+    APIKEY
+    TOKEN
+    NONE
+}
+
+model Trigger{
+    id String @id @default(uuid())
+    integrationId String @map("integration-id")
+    integration Integration @relation(fields:[integrationId],references:[id],onDelete:Cascade)
+    name String
+    description String?
+    triggerType TriggerType @map("trigger-type")
+    outputSchema Json? @map("output-schema")
+    isEnabled Boolean @default(true) @map("is-enabled")
+    workflowTriggers WorkflowTrigger[]
+    @@unique([integrationId,name])
+    @@map("triggers")
+}
+
+enum TriggerType{
+    WEBHOOK
+    POLLING
+    CRON
+}
+
+model Action{
+    id String @id @default(uuid())
+    integrationId String @map("integration-id")
+    integration Integration @relation(fields:[integrationId],references:[id],onDelete:Cascade)
+    name String
+    description String?
+    inputSchema Json? @map("input-schema")
+    outputSchema Json? @map("output-schema")
+    isEnabled Boolean @default(true) @map("is-enabled")
+    workflowSteps WorkflowStep[]
+    @@unique([integrationId,name])
+    @@map("actions")
+}
+
+model Credential{
+    id String @id @default(uuid())
+    userId String @map("user-id")
+    user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+    integrationId String @map("integration-id")
+    integration Integration @relation(fields:[integrationId],references:[id],onDelete:Cascade)
+    label String
+    authType AuthType @map("auth-type")
+    data String
+    isValid Boolean @default(true) @map("is-valid")
+    createdAt DateTime @default(now()) @map("created-at")
+    updatedAt DateTime @updatedAt @map("updated-at")
+    workflowTriggers WorkflowTrigger[]
+    workflowSteps WorkflowStep[]
+    @@map("credentials")
+}
+
+model Workflow{
+    id String @id @default(uuid())
+    userId String @map("user-id")
+    user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+    name String
+    description String?
+    isActive Boolean @default(false) @map("is-active")
+    createdAt DateTime @default(now()) @map("created-at")
+    updatedAt DateTime @updatedAt @map("updated-at")
+    steps WorkflowStep[]
+    trigger WorkflowTrigger?
+    executions WorkflowExecution[]
+    @@map("workflows")
+}
+
+model WorkflowTrigger{
+    id String @id @default(uuid())
+    workflowId String @unique @map("workflow-id")
+    workflow Workflow @relation(fields:[workflowId],references:[id],onDelete:Cascade)
+    triggerId String @unique @map("trigger-id")
+    trigger Trigger @relation(fields:[triggerId],references:[id],onDelete:Cascade)
+    credentialId String? @map("credential-id")
+    credential Credential? @relation(fields:[credentialId],references:[id],onDelete:SetNull)
+    config Json?
+    webhookSecret String? @map("webhook-secret")
+    webhookPath String? @unique @map("webhook-path")
+    cron String?
+    lastFiredAt DateTime? @map("last-fired-at")
+    @@map("workflow-triggers")
+}
+
+model WorkflowStep{
+    id String @id @default(uuid())
+    workflowId String @map("workflow-id")
+    workflow Workflow @relation(fields:[workflowId],references:[id],onDelete:Cascade)
+    actionId String @map("action-id")
+    action Action @relation(fields:[actionId],references:[id],onDelete:Cascade)
+    credentialId String? @map("credential-id")
+    credential Credential? @relation(fields:[credentialId],references:[id],onDelete:SetNull)
+    stepOrder Int @map("step-order")
+    name String?
     input Json?
+    isEnabled Boolean @default(true) @map("is-enabled")
+    stepResults StepResult[]
+    @@unique([workflowId,stepOrder])
+    @@map("workflow-steps")
+}
+
+model WorkflowExecution{
+    id String @id @default(uuid())
+    workflowId String @map("workflow-id")
+    workflow Workflow @relation(fields:[workflowId],references:[id],onDelete:Cascade)
+    status ExecutionStatus @default(PENDING)
+    triggerData Json? @map("trigger-data")
     startedAt DateTime? @map("started-at")
     finishedAt DateTime? @map("finished-at")
+    error String?
     createdAt DateTime @default(now()) @map("created-at")
-    dag Dag @relation(fields:[dagId],references:[id])
-    taskInstances TaskInstance[]
-    @@map("dag-runs")
+    stepResults StepResult[]
+    @@index([workflowId,createdAt])
+    @@map("workflow-executions")
 }
 
-enum DagRunEnum{
+enum ExecutionStatus{
     PENDING
     RUNNING
     COMPLETED
     FAILED
+    CANCELLED
 }
 
-model TaskInstance{
+model StepResult{
     id String @id @default(uuid())
-    dagRunId String @map("dag-run-id")
-    taskNodeId String @map("task-node-id")
-    status TaskInstanceEnum @default(WAITING)
-    remainingDependencies Int @default(0) @map("remaining-dependencies")
-    attemptNumber Int @default(0) @map("attempt-number")
-    result Json?
+    executionId String @map("execution-id")
+    workflowStepId String @map("workflow-step-id")
+    stepOrder Int @map("step-order")
+    status StepStatus @default(PENDING)
+    input Json?
+    output Json?
     error String?
     startedAt DateTime? @map("started-at")
     finishedAt DateTime? @map("finished-at")
-    rent TaskRent?
-    dagRun DagRun @relation(fields:[dagRunId],references:[id],onDelete:Cascade)
-    taskNode TaskNode @relation(fields:[taskNodeId],references:[id],onDelete:Cascade)
-    @@unique([dagRunId,taskNodeId])
-    @@index([status,remainingDependencies])
-    @@map("task-instances")
+    attemptNumber Int @default(0) @map("attempt-number")
+    execution WorkflowExecution @relation(fields:[executionId],references:[id],onDelete:Cascade)
+    workflowStep WorkflowStep @relation(fields:[workflowStepId],references:[id],onDelete:Cascade)
+    @@index([status,stepOrder])
+    @@unique([executionId,workflowStepId])
+    @@map("step-results")
 }
 
-enum TaskInstanceEnum{
-    WAITING
-    READY
+enum StepStatus{
+    PENDING
     RUNNING
     COMPLETED
     FAILED
-}
-
-model TaskRent{
-    taskInstanceId String @id @map("task-instance-id")
-    workerId String @map("worker-id")
-    executionId BigInt @default(autoincrement()) @map("execution-id")
-    acquiredAt DateTime @default(now()) @map("acquired-at")
-    expiresAt DateTime @map("expires-at")
-    taskInstance TaskInstance @relation(fields:[taskInstanceId],references:[id],onDelete:Cascade)
-    @@map("task-rents")
+    SKIPPED
 }

@@ -1,21 +1,21 @@
-import { claimTask } from "./claim.js"
-import { executeTask } from "./executor.js"
+import { claimStep } from "./claim.js"
+import { executeStep } from "./executor.js"
 
 export const startPollingLoop=(workerId:string)=>{
     return setInterval(async()=>{
         try{
-            const task=await claimTask(workerId)
-            if(!task){
+            const step=await claimStep(workerId)
+            if(!step){
                 return
             }
-            await executeTask(task,workerId)
-            const next=await claimTask(workerId)
+            await executeStep(step,workerId)
+            const next=await claimStep(workerId)
             if(next){
-                await executeTask(next,workerId)
+                await executeStep(next,workerId)
             }
         } 
         catch(e){
             console.error(e)
         }
-    },5000)
+    },500)
 }

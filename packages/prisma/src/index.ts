@@ -3,6 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import { env } from './env.js';
 import { logger } from './logger.js';
 import { createLogger } from './logger.js';
+export { redis } from './redis.js';
+
 const globalForPrisma = globalThis as typeof globalThis & {
   prisma?: PrismaClient;
 };
