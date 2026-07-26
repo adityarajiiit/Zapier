@@ -68,6 +68,7 @@ model Integration{
     triggers Trigger[]
     actions Action[]
     credentials Credential[]
+    oauthConfig OAuthConfig?
     @@map("integrations")
 }
 
@@ -120,10 +121,11 @@ model Credential{
     integration Integration @relation(fields:[integrationId],references:[id],onDelete:Cascade)
     label String
     authType AuthType @map("auth-type")
-    data String
+    encryptedData String @map("encrypted-data")
     isValid Boolean @default(true) @map("is-valid")
     createdAt DateTime @default(now()) @map("created-at")
     updatedAt DateTime @updatedAt @map("updated-at")
+    tokenExpiresAt DateTime? @map("token-expires-at")
     workflowTriggers WorkflowTrigger[]
     workflowSteps WorkflowStep[]
     @@map("credentials")
@@ -226,3 +228,17 @@ enum StepStatus{
     FAILED
     SKIPPED
 }
+
+model OAuthConfig{
+    id String @id @default(uuid())
+    integrationId String @unique @map("integration-id")
+    integration Integration @relation(fields:[integrationId],references:[id],onDelete:Cascade)
+    clientId String @map("client-id")
+    clientSecret String @map("client-secret")
+    authUrl String @map("auth-url")
+    tokenUrl String @map("token-url")
+    scopes String[]
+    extraParams Json? @map("extra-params")
+    @@map("oauth-configs")
+}
+

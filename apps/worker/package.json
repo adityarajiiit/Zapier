@@ -6,13 +6,15 @@
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "scripts": {
-        "dev": "tsx watch index.ts",
+        "dev": "tsx watch --env-file=.env index.ts",
         "build": "tsc"
     },
     "dependencies": {
         "@repo/engine": "workspace:*",
         "@repo/integrations": "workspace:*",
-        "@repo/prisma": "workspace:*"
+        "@repo/prisma": "workspace:*",
+        "@repo/crypto": "workspace:*",
+        "@repo/oauth": "workspace:*"
     },
     "devDependencies": {
         "@repo/typescript-config": "workspace:*",

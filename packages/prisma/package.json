@@ -12,22 +12,27 @@
 		}
 	},
 	"prisma": {
-		"schema": "./prisma/schema.prisma"
+		"schema": "./prisma/schema.prisma",
+		"seed": "tsx src/seed.ts"
 	},
 	"scripts": {
 		"db:generate": "prisma generate",
 		"db:migrate": "prisma migrate dev",
 		"db:push": "prisma db push",
-		"build": "tsc -p tsconfig.json"
+		"db:seed": "prisma db seed",
+		"build": "tsc -p tsconfig.build.json"
 	},
 	"devDependencies": {
 		"@repo/typescript-config": "workspace:*",
 		"@types/node": "^22.15.3",
 		"prisma": "^6.19.3",
+		"tsx": "^4.20.4",
 		"typescript": "^7.0.2"
 	},
 	"dependencies": {
 		"@prisma/client": "^6.19.3",
+		"@repo/crypto": "workspace:*",
+		"@repo/oauth": "workspace:*",
 		"ioredis": "^5.11.1",
 		"pino": "^10.3.1",
 		"zod": "^4.4.3"
