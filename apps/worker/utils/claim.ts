@@ -37,7 +37,6 @@ export const claimStep=async(workerId:string)=>{
             workflowStep:{
                 include:{
                     action:true,
-                    credential:true
                 }
             }
         }

@@ -216,6 +216,15 @@ export const credentialController={
                 error=await res.text()
             }
            }
+           else if(integrationName==="gemini"){
+            const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${token}`,{
+                method:"GET"
+            })
+            isValid=res.ok
+            if(!res.ok){
+                error=await res.text()
+            }
+           }
            else{
             isValid=credential.isValid
            }

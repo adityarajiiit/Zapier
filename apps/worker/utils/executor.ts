@@ -2,7 +2,8 @@ import { prisma } from "@repo/prisma"
 import { integration } from "@repo/integrations"
 import { resolveInput } from "@repo/engine"
 import { completeStep,failStep } from "@repo/engine"
-
+import { getDecryptedCredential } from "@repo/oauth"
+import { decrypt } from "@repo/crypto"
 export const executeStep=async(stepResult:any,workerId:string)=>{
     try{
         const action=stepResult.workflowStep.action
@@ -17,9 +18,26 @@ export const executeStep=async(stepResult:any,workerId:string)=>{
             return
         }
 
-        let credential=null
-        if(stepResult.workflowStep.credential?.data){
-            credential=JSON.parse(stepResult.workflowStep.credential.data)
+        let credential:any=null
+        if(stepResult.workflowStep.credentialId){
+            try{
+                const cred=await prisma.credential.findUnique({
+                    where:{id:stepResult.workflowStep.credentialId}
+                })
+                if(cred?.authType==='OAUTH2'){
+                    credential=await getDecryptedCredential(stepResult.workflowStep.credentialId)
+                }
+                else if(cred?.authType==='APIKEY'||cred?.authType==='TOKEN'){
+                    const decrypted=await decrypt(cred.encryptedData)
+                    credential=JSON.parse(decrypted)
+                }
+            }
+            catch(e:any){
+                await prisma.$transaction(async(t:any)=>{
+                    await failStep(t,stepResult.id,`credential decryp failed`+e.message,false)
+                })
+                return
+            }
         }
 
         const completedSteps=await prisma.stepResult.findMany({
@@ -43,8 +61,8 @@ export const executeStep=async(stepResult:any,workerId:string)=>{
         )
 
         const actionContext={
-            input,
-            credentials:credential,
+            inputData:input,
+            credentialData:credential||undefined,
             executionId:stepResult.executionId,
             stepResultId:stepResult.id
         }

@@ -36,7 +36,27 @@ const providers:Record<string,ProviderConfig>={
         scopes:[],
         refresh:false,
         useBasicAuthForToken:true
-    }
+    },
+  Gmail:{
+    authUrl:"https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl:"https://oauth2.googleapis.com/token",
+    scopes:[
+      "https://www.googleapis.com/auth/gmail.modify", 
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/gmail.readonly"
+    ],
+    refresh:true,
+    params:{prompt:"consent",access_type:"offline"}
+  },
+  GoogleSheets:{
+    authUrl:"https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl:"https://oauth2.googleapis.com/token",
+    scopes:[
+      "https://www.googleapis.com/auth/spreadsheets"
+    ],
+    refresh:true,
+    params:{prompt:"consent",access_type:"offline"}
+  }
 }
 
 export const getProviderConfig=(name:string):ProviderConfig|undefined=>{
