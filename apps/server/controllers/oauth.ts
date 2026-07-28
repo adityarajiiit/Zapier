@@ -4,8 +4,8 @@ import { generateAuthUrl,exchangeCodeForToken,createCredentialFromTokens } from 
 import{redis} from"@repo/prisma"
 import crypto from "node:crypto";
 export const oauthController={
-    connect:async(req:FastifyRequest,reply:FastifyReply)=>{
-        const userId=req.headers["x-user-id"] as string
+    connect:async(req:any,reply:any)=>{
+        const userId=req.userId as string
         if(!userId){
             return reply.status(400).send({
                 error:"missing userId"
@@ -47,7 +47,7 @@ export const oauthController={
             })
         }
     },
-    callback:async(req:FastifyRequest,reply:FastifyReply)=>{
+    callback:async(req:any,reply:any)=>{
         const{code,state}=req.query as{
             code?:string,
             state?:string

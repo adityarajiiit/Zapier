@@ -1,7 +1,7 @@
 import {prisma} from "@repo/prisma"
 export const integrationController={
     getAll:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
@@ -14,7 +14,7 @@ export const integrationController={
         return integrations
     },
     getIntegration:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }

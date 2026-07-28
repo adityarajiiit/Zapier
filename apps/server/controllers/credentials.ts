@@ -3,8 +3,8 @@ import {FastifyRequest,FastifyReply} from "fastify"
 import {encrypt,decrypt} from "@repo/crypto"
 import {getDecryptedCredential} from "@repo/oauth"
 export const credentialController={
-    getAll:async(req:FastifyRequest,reply:FastifyReply)=>{
-        const userId=req.headers['x-user-id'] as string
+    getAll:async(req:any,reply:any)=>{
+        const userId=req.userId as string
         if(!userId){
             return reply.status(400).send({
                 error:"missing userId"
@@ -29,8 +29,8 @@ export const credentialController={
         }))
         return reply.send(credential)
     },
-    create:async(req:FastifyRequest,reply:FastifyReply)=>{
-        const userId=req.headers['x-user-id'] as string
+    create:async(req:any,reply:any)=>{
+        const userId=req.userId as string
         if(!userId){
             return reply.status(400).send({
                 error:"missing userId"
@@ -85,8 +85,8 @@ export const credentialController={
             createdAt:credential.createdAt
         })
     },
-    delete:async(req:FastifyRequest,reply:FastifyReply)=>{
-        const userId=req.headers['x-user-id'] as string
+    delete:async(req:any,reply:any)=>{
+        const userId=req.userId as string
         if(!userId){
             return reply.status(400).send({
                 error:"missing userId"
@@ -129,8 +129,8 @@ export const credentialController={
             message:"credential deleted"
         })
     },
-    test:async(req:FastifyRequest,reply:FastifyReply)=>{
-        const userId=req.headers['x-user-id'] as string
+    test:async(req:any,reply:any)=>{
+        const userId=req.userId as string
         if(!userId){
             return reply.status(400).send({
                 error:"missing userId"

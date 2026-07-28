@@ -1,7 +1,7 @@
 import{prisma} from "@repo/prisma"
 export const workflowController={
     newWorkflow:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
@@ -14,7 +14,7 @@ export const workflowController={
         return workflow
     },
     getAll:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
@@ -29,7 +29,7 @@ export const workflowController={
         return workflows
     },
     getWorkflow:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
@@ -57,7 +57,7 @@ export const workflowController={
         return workflow
     },
     updateWorkflow:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
@@ -73,7 +73,7 @@ export const workflowController={
         return workflow
     },
     deleteWorkflow:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
@@ -85,7 +85,7 @@ export const workflowController={
         return {success:true}
     },
     activateWorkflow:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
@@ -100,7 +100,7 @@ export const workflowController={
         return workflow
     },
     deactivateWorkflow:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
@@ -115,7 +115,7 @@ export const workflowController={
         return workflow
     },
     triggerWorkflow:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }

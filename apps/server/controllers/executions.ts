@@ -2,7 +2,7 @@ import { prisma } from "@repo/prisma";
 
 export const executionController={
     getAll:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
@@ -16,7 +16,7 @@ export const executionController={
         return executions
     },
     getExecution:async(request:any,reply:any)=>{
-        const userId=request.user?.id
+        const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
