@@ -1,5 +1,6 @@
 import { Integration,ActionHandler,TriggerHandler, } from "./types.js"
 import { prisma } from "@repo/prisma"
+import{encrypt} from "@repo/crypto"
 class Integrations{
     private integrations=new Map<string,Integration>()
     register(integration:Integration){
@@ -54,7 +55,7 @@ class Integrations{
                         outputSchema:trigger.outputSchema as any||null,
                     },
                     create:{
-                        id:trigger.id,
+                        id:`${integration.id}-${trigger.id}`,
                         integrationId:integration.id,
                         name:trigger.name,
                         description:trigger.description||null,
@@ -77,7 +78,7 @@ class Integrations{
                         outputSchema:action.outputSchema as any||null,
                     },
                     create:{
-                        id:action.id,
+                        id:`${integration.id}-${action.id}`,
                         integrationId:integration.id,
                         name:action.name,
                         description:action.description||null,
@@ -86,8 +87,89 @@ class Integrations{
                     }
                 })
             }
+            if(integration.authType==='OAUTH2'){
+                const oauthMeta=oauthMap[integration.id]
+                if(oauthMeta){
+                    const clientId=process.env[oauthMeta.clientIdEnv]
+                    const clientSecret=process.env[oauthMeta.clientSecretEnv]
+                    if(clientId&&clientSecret){
+                        const encryptedSecret=await encrypt(clientSecret)
+                        await prisma.oAuthConfig.upsert({
+                            where:{integrationId:integration.id},
+                            update:{
+                                clientId,
+                                clientSecret:encryptedSecret,
+                                authUrl:oauthMeta.authUrl,
+                                tokenUrl:oauthMeta.tokenUrl,
+                                scopes:oauthMeta.scopes,
+                                extraParams:oauthMeta.extraParams as any||null,
+                            },
+                            create:{
+                                integrationId:integration.id,
+                                clientId,
+                                clientSecret:encryptedSecret,
+                                authUrl:oauthMeta.authUrl,
+                                tokenUrl:oauthMeta.tokenUrl,
+                                scopes:oauthMeta.scopes,
+                                extraParams:oauthMeta.extraParams as any||null,
+                            }
+                        })
+                    }
+                }
+            }
         }
     }
+}
+
+const oauthMap:Record<string,{
+    clientIdEnv:string
+    clientSecretEnv:string
+    authUrl:string
+    tokenUrl:string
+    scopes:string[]
+    extraParams?:Record<string,string>
+}>={
+    github:{
+        clientIdEnv:'GITHUB_CLIENT_ID',
+        clientSecretEnv:'GITHUB_CLIENT_SECRET',
+        authUrl:'https://github.com/login/oauth/authorize',
+        tokenUrl:'https://github.com/login/oauth/access_token',
+        scopes:['repo','read:user'],
+    },
+    slack:{
+        clientIdEnv:'SLACK_CLIENT_ID',
+        clientSecretEnv:'SLACK_CLIENT_SECRET',
+        authUrl:'https://slack.com/oauth/v2/authorize',
+        tokenUrl:'https://slack.com/api/oauth.v2.access',
+        scopes:['chat:write','channels:read'],
+    },
+    gmail:{
+        clientIdEnv:'GOOGLE_CLIENT_ID',
+        clientSecretEnv:'GOOGLE_CLIENT_SECRET',
+        authUrl:'https://accounts.google.com/o/oauth2/v2/auth',
+        tokenUrl:'https://oauth2.googleapis.com/token',
+        scopes:[
+            'https://www.googleapis.com/auth/gmail.modify',
+            'https://www.googleapis.com/auth/gmail.send',
+            'https://www.googleapis.com/auth/gmail.readonly',
+        ],
+        extraParams:{prompt:'consent',access_type:'offline'},
+    },
+    'google-sheets':{
+        clientIdEnv:'GOOGLE_CLIENT_ID',
+        clientSecretEnv:'GOOGLE_CLIENT_SECRET',
+        authUrl:'https://accounts.google.com/o/oauth2/v2/auth',
+        tokenUrl:'https://oauth2.googleapis.com/token',
+        scopes:['https://www.googleapis.com/auth/spreadsheets'],
+        extraParams:{prompt:'consent',access_type:'offline'},
+    },
+    notion:{
+        clientIdEnv:'NOTION_CLIENT_ID',
+        clientSecretEnv:'NOTION_CLIENT_SECRET',
+        authUrl:'https://api.notion.com/v1/oauth/authorize',
+        tokenUrl:'https://api.notion.com/v1/oauth/token',
+        scopes:[],
+    },
 }
 
 export const integration=new Integrations()

@@ -23,17 +23,22 @@
 		"build": "tsc -p tsconfig.build.json"
 	},
 	"devDependencies": {
+		"@prisma/config": "^7.9.1",
 		"@repo/typescript-config": "workspace:*",
 		"@types/node": "^22.15.3",
+		"@types/pg": "^8.20.3",
+		"dotenv": "^17.4.2",
 		"prisma": "^6.19.3",
 		"tsx": "^4.20.4",
 		"typescript": "^7.0.2"
 	},
 	"dependencies": {
+		"@prisma/adapter-pg": "^7.9.1",
 		"@prisma/client": "^6.19.3",
 		"@repo/crypto": "workspace:*",
 		"@repo/oauth": "workspace:*",
 		"ioredis": "^5.11.1",
+		"pg": "^8.22.0",
 		"pino": "^10.3.1",
 		"zod": "^4.4.3"
 	}

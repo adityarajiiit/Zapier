@@ -7,7 +7,7 @@ export const integrationTest:Integration={
     triggers:{},
     actions:{
        log:{
-        id:'log',
+        id:'test-log',
         name:'Log Data',
         handler:async(context:any)=>{
             return{
@@ -17,7 +17,7 @@ export const integrationTest:Integration={
         }
        },
        delay:{
-        id:'delay',
+        id:'test-delay',
         name:'Delay',
         handler:async(context:any)=>{
             const seconds=context.inputData?.seconds||1
@@ -28,7 +28,7 @@ export const integrationTest:Integration={
         }
        },
        fail:{
-        id:'fail',
+        id:'test-fail',
         name:'Always Fail',
         handler:async(context:any)=>{
             throw new Error('always fail')

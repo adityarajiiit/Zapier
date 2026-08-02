@@ -20,6 +20,7 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@repo/prisma": "workspace:^"
+    "@repo/prisma": "workspace:^",
+    "@repo/crypto": "workspace:^"
   }
 }
