@@ -39,7 +39,7 @@ export const oauthController={
         }
         try{
             const url=await generateAuthUrl(integrationId,redirectUri!,state)
-            return reply.redirect(url)
+            return reply.send({url})
         }
         catch(e:any){
             return reply.status(500).send({
@@ -53,12 +53,12 @@ export const oauthController={
             state?:string
         }
         if(!code||!state){
-            return reply.redirect(`http://localhost:3001?error=missing_params`)
+            return reply.redirect(`${process.env.WEB_URL}?error=missing_params`)
         }
         const stateKey=`oauth-state-${state}`
         const stateData=await redis.get(stateKey)
         if(!stateData){
-            return reply.redirect(`http://localhost:3001?error=invalid_or_expired_state`)
+            return reply.redirect(`${process.env.WEB_URL}?error=invalid_or_expired_state`)
         }
         await redis.del(stateKey)
         try{
@@ -69,7 +69,7 @@ export const oauthController={
                 }
             })
             if(!integration){
-                return reply.redirect(`http://localhost:3001?error=integration_not_found`)
+                return reply.redirect(`${process.env.WEB_URL}?error=integration_not_found`)
             }
             let redirectUri=process.env.OAUTH_REDIRECT_URL
             if(integration.name.toLowerCase()==="slack"){
@@ -78,10 +78,11 @@ export const oauthController={
             const tokenData=await exchangeCodeForToken(integrationId,code,redirectUri!)
             const label=`${integration.name}-Account`
             await createCredentialFromTokens(userId,integrationId,label,tokenData)
-            return reply.redirect(`http://localhost:3001?connected=true`)
+            return reply.redirect(`${process.env.WEB_URL}?connected=true`)
         }
         catch(e:any){
-            return reply.redirect(`http://localhost:3001?error=${e.message}`)
+            console.error('oauth callback error:',e)
+            return reply.redirect(`${process.env.WEB_URL}?error=${encodeURIComponent(e.message)}`)
         }
     }
 }

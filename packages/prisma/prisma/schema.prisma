@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 model User{
     id String @id @default(uuid()) 
     name String
@@ -69,6 +70,7 @@ model Integration{
     actions Action[]
     credentials Credential[]
     oauthConfig OAuthConfig?
+    rateLimitConfig RateLimitConfig?
     @@map("integrations")
 }
 
@@ -77,6 +79,13 @@ enum AuthType{
     APIKEY
     TOKEN
     NONE
+}
+
+enum StepType{
+    ACTION
+    CONDITION
+    FILTER
+    DELAY
 }
 
 model Trigger{
@@ -143,6 +152,7 @@ model Workflow{
     steps WorkflowStep[]
     trigger WorkflowTrigger?
     executions WorkflowExecution[]
+    cronSchedule CronSchedule?
     @@map("workflows")
 }
 
@@ -150,7 +160,7 @@ model WorkflowTrigger{
     id String @id @default(uuid())
     workflowId String @unique @map("workflow-id")
     workflow Workflow @relation(fields:[workflowId],references:[id],onDelete:Cascade)
-    triggerId String @unique @map("trigger-id")
+    triggerId String @map("trigger-id")
     trigger Trigger @relation(fields:[triggerId],references:[id],onDelete:Cascade)
     credentialId String? @map("credential-id")
     credential Credential? @relation(fields:[credentialId],references:[id],onDelete:SetNull)
@@ -159,6 +169,7 @@ model WorkflowTrigger{
     webhookPath String? @unique @map("webhook-path")
     cron String?
     lastFiredAt DateTime? @map("last-fired-at")
+    webhooks Webhook[]
     @@map("workflow-triggers")
 }
 
@@ -166,13 +177,16 @@ model WorkflowStep{
     id String @id @default(uuid())
     workflowId String @map("workflow-id")
     workflow Workflow @relation(fields:[workflowId],references:[id],onDelete:Cascade)
-    actionId String @map("action-id")
-    action Action @relation(fields:[actionId],references:[id],onDelete:Cascade)
+    actionId String? @map("action-id")
+    action Action? @relation(fields:[actionId],references:[id],onDelete:SetNull)
     credentialId String? @map("credential-id")
     credential Credential? @relation(fields:[credentialId],references:[id],onDelete:SetNull)
     stepOrder Int @map("step-order")
     name String?
     input Json?
+    stepType StepType @default(ACTION) @map("step-type")
+    conditionConfig Json? @map("condition-config")
+    errorConfig Json? @map("error-config")
     isEnabled Boolean @default(true) @map("is-enabled")
     stepResults StepResult[]
     @@unique([workflowId,stepOrder])
@@ -214,10 +228,12 @@ model StepResult{
     startedAt DateTime? @map("started-at")
     finishedAt DateTime? @map("finished-at")
     attemptNumber Int @default(0) @map("attempt-number")
+    iterationIndex Int? @map("iteration-index")
+    wasSkipped Boolean @default(false) @map("was-skipped")
+    parentResultId String? @map("parent-result-id")
     execution WorkflowExecution @relation(fields:[executionId],references:[id],onDelete:Cascade)
     workflowStep WorkflowStep @relation(fields:[workflowStepId],references:[id],onDelete:Cascade)
     @@index([status,stepOrder])
-    @@unique([executionId,workflowStepId])
     @@map("step-results")
 }
 
@@ -240,5 +256,39 @@ model OAuthConfig{
     scopes String[]
     extraParams Json? @map("extra-params")
     @@map("oauth-configs")
+}
+
+model CronSchedule{
+    id String @id @default(uuid())
+    workflowId String @unique @map("workflow-id")
+    workflow Workflow @relation(fields:[workflowId],references:[id],onDelete:Cascade)
+    cron String
+    nextRunAt DateTime @map("next-run-at")
+    lastRunAt DateTime? @map("last-run-at")
+    isActive Boolean @default(true) @map("is-active")
+    @@index([isActive,nextRunAt])
+    @@map("cron-schedules")
+}
+
+model Webhook{
+    id String @id @default(uuid())
+    workflowTriggerId String @map("workflow-trigger-id")
+    workflowTrigger WorkflowTrigger @relation(fields:[workflowTriggerId],references:[id],onDelete:Cascade)
+    payload Json
+    statusCode Int? @map("status-code")
+    verified Boolean @default(false)
+    executionId String? @map("execution-id")
+    createdAt DateTime @default(now()) @map("created-at")
+    @@index([workflowTriggerId,createdAt])
+    @@map("webhooks")
+}
+
+model RateLimitConfig{
+    id String @id @default(uuid())
+    integrationId String @unique @map("integration-id")
+    integration Integration @relation(fields:[integrationId],references:[id],onDelete:Cascade)
+    period Int
+    maxRequests Int @map("max-requests")
+    @@map("rate-limit-configs")
 }
 

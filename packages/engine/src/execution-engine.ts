@@ -1,24 +1,57 @@
-import { prisma } from '@repo/prisma';
-import { Prisma } from '@repo/prisma';
+import { Prisma } from "@repo/prisma";
+import { prisma } from "@repo/prisma";
+import { ExecutionContext,resolvePath } from "./template.js";
+import { evaluateCondition,evaluateFilter,ConditionConfig } from "./condition.js";
+
+export interface ErrorConfig{
+    onError:'stop'|'continue'|'retry'
+    maxAttempts?:number
+    backoff?:number
+}
+
+export const buildContext=async(executionId:string)=>{
+    const execution=await prisma.workflowExecution.findUniqueOrThrow({
+        where:{
+            id:executionId
+        },
+        select:{
+            triggerData:true,
+        }
+    })
+    const completed=await prisma.stepResult.findMany({
+        where:{
+            executionId,
+            status:'COMPLETED'
+        },
+        select:{
+            stepOrder:true,
+            output:true
+        }
+    })
+    const stepOutputs:any={}
+    for(const r of completed){
+        stepOutputs[`step${r.stepOrder}`]=r.output||{}
+    }
+    return{
+        triggerData:execution.triggerData||{},
+        stepOutputs
+    }
+}
 
 export const claimNextStep=async(workerId:string)=>{
     return prisma.$transaction(async(t:Prisma.TransactionClient)=>{
         const rows=await t.$queryRaw<any>`
-        SELECT id,
-        "execution-id",
-        "step-order",
-        "attempt-number",
-        "workflow-step-id"
+        SELECT id,"execution-id","step-order","attempt-number","workflow-step-id"
         FROM "step-results"
-        WHERE "status" = 'PENDING'
-           AND "step-order"=(
+        WHERE status='PENDING'
+        AND "step-order"=(
             SELECT MIN(sr2."step-order")
             FROM "step-results" sr2
             WHERE sr2."execution-id"="step-results"."execution-id"
-               AND sr2."status"='PENDING'
-           )
-          FOR UPDATE SKIP LOCKED
-          LIMIT 1
+            AND sr2.status='PENDING'
+        )
+        FOR UPDATE SKIP LOCKED
+        LIMIT 1
         `
         if(rows.length===0){
             return null
@@ -26,26 +59,30 @@ export const claimNextStep=async(workerId:string)=>{
         const row=rows[0]
         const now=new Date()
         await t.stepResult.update({
-            where:{id:row.id},
+            where:{
+                id:row.id
+            },
             data:{
                 status:'RUNNING',
                 startedAt:now,
                 finishedAt:null,
                 error:null,
-                attemptNumber:{increment:1}
+                attemptNumber:{
+                    increment:1
+                }
             }
         })
-        await t.workflowExecution.update({
+        await t.workflowExecution.updateMany({
             where:{
                 id:row['execution-id'],
-                status:"PENDING"
+                status:'PENDING'
             },
             data:{
-                status:"RUNNING",
-                startedAt:now,
+                status:'RUNNING',
+                startedAt:now
             }
         })
-        const stepResult=await t.stepResult.findUnique({
+        return t.stepResult.findUnique({
             where:{
                 id:row.id
             },
@@ -59,73 +96,207 @@ export const claimNextStep=async(workerId:string)=>{
                 execution:true
             }
         })
-        return stepResult
     })
 }
 
-export const completeStep=async(t:Prisma.TransactionClient,stepResultId:string,outputData:Record<string,any>)=>{
-    const stepResult=await t.stepResult.findUniqueOrThrow({
+export const skipRemainingSteps=async(
+    t:Prisma.TransactionClient,
+    executionId:string,
+    fromStepOrder:number
+)=>{
+    await t.stepResult.updateMany({
+        where:{
+            executionId,
+            stepOrder:{
+                gt:fromStepOrder
+            },
+            status:'PENDING'
+        },
+        data:{
+            status:'SKIPPED',
+            wasSkipped:true,
+            finishedAt:new Date(),
+        }
+    })
+    await t.workflowExecution.update({
+        where:{
+            id:executionId
+        },
+        data:{
+            status:'COMPLETED',
+            finishedAt:new Date()
+        }
+    })
+}
+
+export const completeStep=async(
+    t:Prisma.TransactionClient,
+    stepResultId:string,
+    outputData:any
+)=>{
+    const sr=await t.stepResult.findUniqueOrThrow({
         where:{
             id:stepResultId
         },
         select:{
             executionId:true,
-            startedAt:true
+            startedAt:true,
+            stepOrder:true
         }
     })
+
     const now=new Date()
-    const duration=stepResult.startedAt? now.getTime()-stepResult.startedAt.getTime():null
+    const duration=sr.startedAt?now.getTime()-sr.startedAt.getTime():null
     await t.stepResult.update({
         where:{
             id:stepResultId
         },
         data:{
-            status:"COMPLETED",
-            output:{...outputData,duration},
-            finishedAt:now,
+            status:'COMPLETED',
+            output:{
+                ...outputData,
+                duration
+            },
+            finishedAt:now
         }
     })
-    const pendingCount=await t.stepResult.count({
-        where:{
-            executionId:stepResult.executionId,
-            status:"PENDING"
-        }
-    })
-    if(pendingCount===0){
+
+    if(outputData?.skippedRemaining){
         await t.workflowExecution.update({
             where:{
-                id:stepResult.executionId
+                id:sr.executionId
             },
             data:{
-                status:"COMPLETED",
-                finishedAt:now,
+                status:'COMPLETED',
+                finishedAt:now
+            }
+        })
+        return
+    }
+
+    const nextStep=await t.workflowStep.findFirst({
+        where:{
+            workflow:{
+                executions:{
+                    some:{
+                        id:sr.executionId
+                    }
+                }
+            },
+            stepOrder:{
+                gt:sr.stepOrder
+            },
+            isEnabled:true
+        },
+        orderBy:{
+            stepOrder:'asc'
+        }
+    })
+    if(nextStep){
+        await t.stepResult.create({
+            data:{
+                executionId:sr.executionId,
+                workflowStepId:nextStep.id,
+                stepOrder:nextStep.stepOrder,
+                status:'PENDING'
+            }
+        })
+    }
+    else{
+        await t.workflowExecution.update({
+            where:{
+                id:sr.executionId
+            },
+            data:{
+                status:'COMPLETED',
+                finishedAt:now
             }
         })
     }
 }
 
-export const failStep=async(t:Prisma.TransactionClient,stepResultId:string,error:string,retryable:boolean)=>{
-    const stepResult=await t.stepResult.findUniqueOrThrow({
+export const failStep=async(
+    t:Prisma.TransactionClient,
+    stepResultId:string,
+    error:string,
+    errorConfig?:ErrorConfig|null
+)=>{
+    const sr=await t.stepResult.findUniqueOrThrow({
         where:{
             id:stepResultId
         },
         select:{
             executionId:true,
             attemptNumber:true,
+            stepOrder:true
         }
     })
     const now=new Date()
-    if(retryable&&stepResult.attemptNumber<5){
+    const onError=errorConfig?.onError||'retry'
+    const maxAttempts=errorConfig?.maxAttempts||5
+    if(onError==='retry'&&sr.attemptNumber<maxAttempts){
         await t.stepResult.update({
             where:{
                 id:stepResultId
             },
             data:{
-                status:"PENDING",
+                status:'PENDING',
                 error,
                 finishedAt:now
             }
         })
+    }
+    else if(onError==='continue'){
+        await t.stepResult.update({
+            where:{
+                id:stepResultId
+            },
+            data:{
+                status:'SKIPPED',
+                wasSkipped:true,
+                error,
+                finishedAt:now
+            }
+        })
+        const nextStep=await t.workflowStep.findFirst({
+            where:{
+                workflow:{
+                    executions:{
+                        some:{
+                            id:sr.executionId
+                        }
+                    }
+                },
+                stepOrder:{
+                    gt:sr.stepOrder
+                },
+                isEnabled:true
+            },
+            orderBy:{
+                stepOrder:'asc'
+            }
+        })
+        if(nextStep){
+            await t.stepResult.create({
+                data:{
+                    executionId:sr.executionId,
+                    workflowStepId:nextStep.id,
+                    stepOrder:nextStep.stepOrder,
+                    status:'PENDING'
+                }
+            })
+        }
+        else{
+            await t.workflowExecution.update({
+                where:{
+                    id:sr.executionId
+                },
+                data:{
+                    status:'COMPLETED',
+                    finishedAt:now
+                }
+            })
+        }
     }
     else{
         await t.stepResult.update({
@@ -133,71 +304,52 @@ export const failStep=async(t:Prisma.TransactionClient,stepResultId:string,error
                 id:stepResultId
             },
             data:{
-                status:"FAILED",
+                status:'FAILED',
                 error,
                 finishedAt:now
             }
         })
         await t.workflowExecution.update({
             where:{
-                id:stepResult.executionId
+                id:sr.executionId
             },
             data:{
-                status:"FAILED",
+                status:'FAILED',
                 error,
                 finishedAt:now
             }
         })
     }
 }
-
-const resolvePath=(path:string,triggerData:Record<string,any>|null,previousStepOutputs:Record<string,Record<string,any>>)=>{
-    const parts=path.split('.')
-    const source=parts[0]
-    const rest=parts.slice(1)
-    let root:any
-    if(source==undefined){
-        return null
-    }
-    if(source==="trigger"){
-        root=triggerData
-    }
-    else{
-        root=previousStepOutputs[source]
-    }
-    let current:any=root
-    for(const part of rest){
-        if(current===null||current===undefined){
-            return undefined
-        }
-        current=current[part]
-    }
-    return current
-}
-
-const resolveString=(str:string,triggerData:Record<string,any>|null,previousOutputs:Record<string,Record<string,any>>)=>{
-    const regex=/\\{\\{([^}]+)\\}\\}/g
+export const resolveString=(str:string,triggerData:any,previousOutputs:any)=>{
+    const regex=/\{\{([^}]+)\}\}/g
     const matches=[...str.matchAll(regex)]
     if(matches.length===0){
         return str
     }
     if(matches.length===1&&str.trim()===matches[0]?.[0]){
-        return resolvePath(matches[0]?.[1]||"".trim(),triggerData,previousOutputs)
+        return resolvePath(matches[0]?.[1]||"".trim(),{
+            triggerData,
+            stepOutputs:previousOutputs
+        })
     }
     return str.replace(regex,(match,p1)=>{
-        const p=resolvePath(p1.trim(),triggerData,previousOutputs)
+        const p=resolvePath(p1.trim(),{
+            triggerData,
+            stepOutputs:previousOutputs
+        })
         if(p===undefined||p===null){
             return ""
         }
-        if(typeof p==="string"){
+        if(typeof p==='string'){
             return p
         }
         return JSON.stringify(p)
     })
 }
 
-const resolveValue=(value:any,triggerData:Record<string,any>|null,previousOutputs:Record<string,Record<string,any>>):any=>{
-    if(typeof value==="string"){
+export const resolveValue=(value:any,triggerData:any,previousOutputs:any):any=>{
+    if(typeof value==='string'){
         return resolveString(value,triggerData,previousOutputs)
     }
     if(Array.isArray(value)){
@@ -213,6 +365,8 @@ const resolveValue=(value:any,triggerData:Record<string,any>|null,previousOutput
     return value
 }
 
-export const resolveInput=(input:Record<string,any>,triggerData:Record<string,any>|null,previousOutputs:Record<string,Record<string,any>>):Record<string,any>=>{
-    return resolveValue(input,triggerData,previousOutputs) as Record<string,any>
+export const resolveInput=(input:any,triggerData:any,previousOutputs:any)=>{
+    return resolveValue(input,triggerData,previousOutputs)
 }
+export {evaluateCondition,evaluateFilter,resolvePath }
+export type {ExecutionContext,ConditionConfig}
