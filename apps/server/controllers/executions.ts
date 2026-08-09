@@ -8,9 +8,15 @@ export const executionController={
         }
         const workflowId=request.query.workflowId
         const executions=await prisma.workflowExecution.findMany({
-            where:workflowId?{workflowId}:undefined,
+            where:{
+                workflow:{userId},
+                ...(workflowId?{workflowId}:{})
+            },
             orderBy:{
                 createdAt:'desc'
+            },
+            include:{
+                stepResults:true
             }
         })
         return executions
