@@ -11,12 +11,16 @@ const globalForPrisma = globalThis as typeof globalThis & {
 };
 
 const pool=new Pool({
-  connectionString:env.DATABASE_URL
+  connectionString:env.DATABASE_URL,
+  max:3,
+  idleTimeoutMillis:30000,
+  connectionTimeoutMillis:10000,
 })
 const adapter=new PrismaPg(pool)
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
+    adapter,
     log: env.LOG_LEVEL === 'debug' ? ['query', 'warn', 'error'] : ['warn', 'error'],
   });
 

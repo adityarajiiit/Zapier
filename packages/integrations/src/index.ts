@@ -9,6 +9,7 @@ import{integrationGoogleSheets} from './integrations/googlesheets/index.js'
 import{notionIntegration} from './integrations/notion/index.js'
 import{integrationGemini}from'./integrations/gemini/index.js'
 import { integrationUtils } from './integrations/utils/index.js';
+import { checkRateLimit } from './utils/ratelimiter.js';
 integration.register(integrationTest)
 integration.register(integrationGithub)
 integration.register(integrationSlack)
@@ -18,3 +19,4 @@ integration.register(notionIntegration)
 integration.register(integrationGemini)
 integration.register(integrationUtils)
 export {integration}
+export {checkRateLimit}

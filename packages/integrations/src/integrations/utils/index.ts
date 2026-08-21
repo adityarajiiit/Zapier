@@ -3,8 +3,7 @@ import{
     delayAction,
     httpRequestAction,
     filterAction,
-    logAction,
-    transformDataAction
+    logAction
 } from './actions.js'
 
 export const integrationUtils:Integration={
@@ -17,7 +16,6 @@ export const integrationUtils:Integration={
         'delay':delayAction,
         'http-request':httpRequestAction,
         'filter':filterAction,
-        'log':logAction,
-        'transform-data':transformDataAction
+        'log':logAction
     }
 }

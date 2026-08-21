@@ -48,18 +48,26 @@ export const slackRoutes=async(app:FastifyInstance)=>{
                 trigger:true
             }
         })
-        const matched=triggers.filter(t=>t.trigger.id===eventType||t.trigger.id==='new-message'&&eventType==='message'||t.trigger.id==='mention'&&eventType==='app_mention'||t.trigger.id==='new-reaction'&&eventType==='reaction_added'||t.trigger.id==='new-channel'&&eventType==='channel_created')
+        const matched=triggers.filter(t=>
+            (t.trigger.id==='slack-new-message'&&eventType==='message')||
+            (t.trigger.id==='slack-mention'&&eventType==='app_mention')||
+            (t.trigger.id==='slack-new-reaction'&&eventType==='reaction_added')||
+            (t.trigger.id==='slack-new-channel'&&eventType==='channel_created')
+        )
         if(matched.length===0){
             return reply.status(200).send({ok:true})
         }
         const sig=request.headers['x-slack-signature'] as string
         const ts=request.headers['x-slack-request-timestamp'] as string
         const executions:string[]=[]
+        const secret=process.env.SLACK_SIGNING_SECRET
+        if(!secret){
+            return reply.status(500).send({error:'no slack signing secret'})
+        }
+        if(!verifySlack(body,sig,ts,secret)){
+            return reply.status(401).send({error:'invalid signature'})
+        }
         for(const trigger of matched){
-            const secret=process.env.SLACK_SIGNING_SECRET
-            if(secret&&!verifySlack(body,sig,ts,secret)){
-                continue
-            }
             const webh=await prisma.webhook.create({
                 data:{
                     workflowTriggerId:trigger.id,

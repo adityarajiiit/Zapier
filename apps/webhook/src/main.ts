@@ -1,5 +1,6 @@
 import fastify from "fastify";
 import cors from '@fastify/cors'
+import rateLimit from '@fastify/rate-limit'
 import { webhookRoutes } from "./routes/webhook.js";
 import { slackRoutes } from "./routes/slack.js";
 import { prisma } from "@repo/prisma";
@@ -8,7 +9,8 @@ const app=fastify({
     logger:true
 })
 
-await app.register(cors as any)
+await app.register(cors as any,{origin:process.env.WEB_URL||false,credentials:true})
+await app.register(rateLimit as any,{max:50,timeWindow:'1 minute',keyGenerator:(req:any)=>req.ip})
 await app.register(webhookRoutes,{
     prefix:'/webhooks'
 })

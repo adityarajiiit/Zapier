@@ -1,14 +1,4 @@
 services:
-  worker:
-    build:
-      context: .
-      dockerfile: apps/worker/Dockerfile
-    environment:
-      - DATABASE_URL=postgresql://postgres:asusvivobook@localhost:5432/postgres
-      - LOG_LEVEL=info
-    network_mode: "host"
-    deploy:
-      replicas: 5
   redis:
     image: redis:7-alpine
     ports:
@@ -16,6 +6,49 @@ services:
     restart: always
     volumes:
       - redisdata:/data
+
+  server:
+    build:
+      context:    .
+      dockerfile: apps/server/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file: .env.production
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  worker:
+    build:
+      context:    .
+      dockerfile: apps/worker/Dockerfile
+    env_file: .env.production
+    depends_on:
+      - redis
+    restart: unless-stopped
+    deploy:
+      replicas: 3 
+
+  webhook:
+    build:
+      context:    .
+      dockerfile: apps/webhook/Dockerfile
+    ports:
+      - "3002:3002"
+    env_file: .env.production
+    restart: unless-stopped
+
+  web:
+    build:
+      context:    .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+    depends_on:
+      - server
+    restart: unless-stopped
 
 volumes:
   redisdata:

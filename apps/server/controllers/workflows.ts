@@ -2,6 +2,8 @@ import{prisma} from "@repo/prisma"
 import { error } from "console"
 import crypto from 'crypto'
 import { request } from "http"
+import { pollQueue, stepsQueue, cronQueue } from "@repo/queue"
+
 export const workflowController={
     newWorkflow:async(request:any,reply:any)=>{
         const userId=request.userId
@@ -41,7 +43,8 @@ export const workflowController={
         }
         const workflow=await prisma.workflow.findUnique({
             where:{
-                id:request.params.id
+                id:request.params.id,
+                userId
             },
             include:{
                 trigger:{
@@ -60,8 +63,8 @@ export const workflowController={
             }
         })
         if(!workflow){
-            return reply.status(404).send({
-                error:'workflow not found'
+            return reply.status(403).send({
+                error:'forbidden'
             })
         }
         const mappedWorkflow={
@@ -82,6 +85,10 @@ export const workflowController={
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
+        const existing=await prisma.workflow.findFirst({where:{id:request.params.id,userId}})
+        if(!existing){
+            return reply.status(403).send({error:'forbidden'})
+        }
         const workflow=await prisma.workflow.update({
             where:{
                 id:request.params.id
@@ -98,6 +105,10 @@ export const workflowController={
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
         }
+        const existing=await prisma.workflow.findFirst({where:{id:request.params.id,userId}})
+        if(!existing){
+            return reply.status(403).send({error:'forbidden'})
+        }
         await prisma.workflow.delete({
             where:{
                 id:request.params.id
@@ -109,6 +120,10 @@ export const workflowController={
         const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
+        }
+        const wf=await prisma.workflow.findFirst({where:{id:request.params.id,userId}})
+        if(!wf){
+            return reply.status(403).send({error:'forbidden'})
         }
         const trigger=await prisma.workflowTrigger.findUnique({
             where:{
@@ -141,7 +156,8 @@ export const workflowController={
         if(trigger?.trigger?.integration?.name==='GitHub'&&path&&secret){
             const config=trigger.config as any||{}
             const repo=config.repo as string
-            if(repo&&trigger.credential?.encryptedData&&!config.githubWebhookId){
+            const owner=config.owner as string
+            if(repo&&owner&&trigger.credential?.encryptedData&&!config.githubWebhookId){
                 const{decrypt}=await import('@repo/crypto')
                 const decryptedStr=await decrypt(trigger.credential.encryptedData)
                 const credData=JSON.parse(decryptedStr)
@@ -149,7 +165,7 @@ export const workflowController={
                 if(token){
                     const baseUrl=process.env.WEBHOOK_URL
                 const webhookUrl=`${baseUrl}/webhooks${path}`
-                const res=await fetch(`https://api.github.com/repos/${repo}/hooks`,{
+                const res=await fetch(`https://api.github.com/repos/${owner}/${repo}/hooks`,{
                     method:'POST',
                     headers:{
                         'Accept':'application/vnd.github.v3+json',
@@ -191,12 +207,33 @@ export const workflowController={
                 isActive:true
             }
         })
+        if(trigger?.trigger?.triggerType==='POLLING'){
+            await pollQueue.upsertJobScheduler(
+            `poll-${trigger.id}`,
+            {every:60*1000},
+        {
+            name:'poll-trigger',
+            data:{workflowTriggerId:trigger.id}
+        }
+    )
+    }
+        if(trigger?.trigger?.triggerType==='CRON'&&trigger.cron){
+            await cronQueue.upsertJobScheduler(
+                `cron-${trigger.id}`,
+                {pattern:trigger.cron},
+                {name:'cron-trigger',data:{workflowId:trigger.workflowId}}
+            )
+        }
         return workflow
     },
     deactivateWorkflow:async(request:any,reply:any)=>{
         const userId=request.userId
         if(!userId){
             return reply.status(400).send({error:'userId is required'})
+        }
+        const wf=await prisma.workflow.findFirst({where:{id:request.params.id,userId}})
+        if(!wf){
+            return reply.status(403).send({error:'forbidden'})
         }
         const trigger=await prisma.workflowTrigger.findUnique({
             where:{
@@ -214,14 +251,15 @@ export const workflowController={
         if(trigger?.trigger?.integration?.name==='GitHub'){
             const config=trigger.config as any||{}
             const repo=config.repo as string
+            const owner=config.owner as string
             const hookId=config.githubWebhookId
-            if(repo&&hookId&&trigger.credential?.encryptedData){
+            if(repo&&owner&&hookId&&trigger.credential?.encryptedData){
                 const{decrypt}=await import('@repo/crypto')
                 const decryptedStr=await decrypt(trigger.credential.encryptedData)
                 const credData=JSON.parse(decryptedStr)
                 const token=credData.accessToken
                 if(token){
-                    const res=await fetch(`https://api.github.com/repos/${repo}/hooks/${hookId}`,{
+                    const res=await fetch(`https://api.github.com/repos/${owner}/${repo}/hooks/${hookId}`,{
                         method:'DELETE',
                         headers:{
                             'Accept':'application/vnd.github.v3+json',
@@ -250,6 +288,12 @@ export const workflowController={
                 isActive:false
             }
         })
+        if(trigger?.trigger?.triggerType==='POLLING'){
+            await pollQueue.removeJobScheduler(`poll-${trigger.id}`)
+        }
+        if(trigger?.trigger?.triggerType==='CRON'){
+            await cronQueue.removeJobScheduler(`cron-${trigger.id}`)
+        }
         return workflow
     },
         triggerWorkflow:async(request:any,reply:any)=>{
@@ -259,7 +303,8 @@ export const workflowController={
         }
         const workflow=await prisma.workflow.findUnique({
             where:{
-                id:request.params.id
+                id:request.params.id,
+                userId
             },
             include:{
                 steps:{
@@ -270,8 +315,8 @@ export const workflowController={
             }
         })
         if(!workflow){
-            return reply.status(404).send({
-                error:'workflow not found'
+            return reply.status(403).send({
+                error:'forbidden'
             })
         }
         const isCompleted=workflow.steps.length===0
@@ -295,6 +340,10 @@ export const workflowController={
                 stepResults:true
             }
         })
+        const firstStepResult=execution.stepResults?.[0]
+        if(firstStepResult){
+            await stepsQueue.add('execute-step',{stepResultId:firstStepResult.id},{attempts:5,backoff:{type:'exponential',delay:1000}})
+        }
         return execution
     },
     addStep:async(request:any,reply:any)=>{
@@ -348,6 +397,10 @@ export const workflowController={
             })
         }
         const{stepType,actionId,name,input,conditionConfig,errorConfig,isEnabled}=request.body
+        const wf=await prisma.workflow.findFirst({where:{id:request.params.id,userId}})
+        if(!wf){
+            return reply.status(403).send({error:'forbidden'})
+        }
         const step=await prisma.workflowStep.update({
             where:{
                 id:request.params.stepId
@@ -373,6 +426,10 @@ export const workflowController={
         }
         const{stepId}=request.params
         const workflowId=request.params.id
+        const wf=await prisma.workflow.findFirst({where:{id:workflowId,userId}})
+        if(!wf){
+            return reply.status(403).send({error:'forbidden'})
+        }
         await prisma.$transaction(async(t)=>{
             await t.workflowStep.delete({
                 where:{
@@ -411,8 +468,12 @@ export const workflowController={
             })
         }
         const steps=request.body
+        const wf=await prisma.workflow.findFirst({where:{id:request.params.id,userId}})
+        if(!wf){
+            return reply.status(403).send({error:'forbidden'})
+        }
         await prisma.$transaction(
-            steps.map((step:any)=>{
+            steps.map((step:any)=>
                 prisma.workflowStep.update({
                     where:{
                         id:step.id
@@ -421,7 +482,7 @@ export const workflowController={
                         stepOrder:step.stepOrder
                     }
                 })
-            })
+            )
         )
         return {success:true}
     },
@@ -431,6 +492,10 @@ export const workflowController={
             return reply.status(400).send({
                 error:'user id required'
             })
+        }
+        const wf=await prisma.workflow.findFirst({where:{id:request.params.id,userId}})
+        if(!wf){
+            return reply.status(403).send({error:'forbidden'})
         }
         const workflow=await prisma.workflowTrigger.findUnique({
             where:{
@@ -471,6 +536,10 @@ export const workflowController={
         }
         const workflowId=request.params.id
         const{trigger,steps}=request.body
+        const wf=await prisma.workflow.findFirst({where:{id:workflowId,userId}})
+        if(!wf){
+            return reply.status(403).send({error:'forbidden'})
+        }
         await prisma.$transaction(async(t)=>{
             if(trigger?.triggerId){
                 await t.workflowTrigger.upsert({

@@ -3,7 +3,7 @@ import { Trigger } from "../../types.js";
 export const newMessageTrigger:Trigger={
     id:'new-message',
     name:'New Message',
-    description:'Triggers on a new message in a channel',
+    description:'new message',
     triggerType:'WEBHOOK',
     outputSchema:{
         type:'object',
@@ -30,7 +30,7 @@ export const newMessageTrigger:Trigger={
 export const newReactionTrigger:Trigger={
     id:'new-reaction',
     name:'New Reaction',
-    description:'Triggers on a new reaction to a message',
+    description:'new reaction',
     triggerType:'WEBHOOK',
     outputSchema:{
         type:'object',
@@ -57,7 +57,7 @@ export const newReactionTrigger:Trigger={
 export const newChannelTrigger:Trigger={
     id:'new-channel',
     name:'New Channel',
-    description:'Triggers on a new channel',
+    description:'new channel',
     triggerType:'WEBHOOK',
     outputSchema:{
         type:'object',
@@ -75,7 +75,7 @@ export const newChannelTrigger:Trigger={
 export const mentionTrigger:Trigger={
     id:'mention',
     name:'App Mention',
-    description:'Triggers when the bot is mentioned',
+    description:'app mention',
     triggerType:'WEBHOOK',
     outputSchema:{
         type:'object',

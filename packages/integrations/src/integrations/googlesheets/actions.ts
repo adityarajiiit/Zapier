@@ -17,7 +17,18 @@ const headers=(accessToken?:string)=>({
 export const addRowAction:Action={
     id:'add-row',
     name:'Add Row',
-    description:'Adds a new row to a Google Sheet',
+    description:'add row',
+    inputSchema:{
+        spreadsheetId:{type:'string',description:'spreadsheet id'},
+        sheetName:{type:'string',description:'sheet name'},
+        values:{type:'string',description:'comma separated values like a, b, c.To use that data block write it as {{stepX.updates}}'}
+    },
+    outputSchema:{
+        type:'object',
+        properties:{
+            updates:{type:'object'}
+        }
+    },
     handler:async(context:ActionContext)=>{
         const input=context.inputData as AddRowInput
         const accessToken=context.credentialData?.accessToken as string
@@ -25,7 +36,7 @@ export const addRowAction:Action={
             method:'POST',
             headers:headers(accessToken),
             body:JSON.stringify({
-                values:[input.values],
+                values:[input.values.split(',')],
             })
         })
         if(!res.ok){
@@ -38,7 +49,18 @@ export const addRowAction:Action={
 export const updateRowAction:Action={
     id:'update-row',
     name:'Update Row',
-    description:'Updates an existing row in a Google Sheet',
+    description:'update row',
+    inputSchema:{
+        spreadsheetId:{type:'string',description:'spreadsheet id'},
+        range:{type:'string',description:'cell range like Sheet1!A2:C2'},
+        values:{type:'string',description:'comma separated values like a, b, c.To use that data block write it as {{stepX.updates}}'}
+    },
+    outputSchema:{
+        type:'object',
+        properties:{
+            updates:{type:'object'}
+        }
+    },
     handler:async(context:ActionContext)=>{
         const input=context.inputData as UpdateRowInput
         const accessToken=context.credentialData?.accessToken as string
@@ -46,20 +68,31 @@ export const updateRowAction:Action={
             method:'PUT',
             headers:headers(accessToken),
             body:JSON.stringify({
-                values:[input.values],
+                values:[input.values.split(',')],
             })
         })
         if(!res.ok){
             throw new Error(`${res.status}`)
         }
-        return res.json()
+        return {updates:await res.json()}
     }
 }
 
 export const getRowAction:Action={
     id:'get-row',
     name:'Get Row',
-    description:'Get a specific row',
+    description:'get row',
+    inputSchema:{
+        spreadsheetId:{type:'string',description:'spreadsheet id'},
+        sheetName:{type:'string',description:'sheet name'},
+        rowNumber:{type:'string',description:'row number.To use that data block write it as {{stepX.rowNumber}}'}
+    },
+    outputSchema:{
+        type:'object',
+        properties:{
+            values:{type:'array'}
+        }
+    },
     handler:async(context:ActionContext)=>{
         const input=context.inputData as GetRowInput
         const accessToken=context.credentialData?.accessToken as string
@@ -78,7 +111,19 @@ export const getRowAction:Action={
 export const searchRowsAction:Action={
     id:'search-rows',
     name:'Search Rows',
-    description:'Search for rows in a Google Sheet',
+    description:'search rows',
+    inputSchema:{
+        spreadsheetId:{type:'string',description:'spreadsheet id'},
+        sheetName:{type:'string',description:'sheet name'},
+        columnIndex:{type:'string',description:'column index (0 = first column, 1 = second column, ...)'},
+        searchValue:{type:'string',description:'search value.Use the exact output field name from the previous step e.g. {{step0.text}} or {{step0.summary}}'}
+    },
+    outputSchema:{
+        type:'object',
+        properties:{
+            values:{type:'array'}
+        }
+    },
     handler:async(context:ActionContext)=>{
         const input=context.inputData as SearchRowsInput
         const accessToken=context.credentialData?.accessToken
@@ -102,7 +147,17 @@ export const searchRowsAction:Action={
 export const createSpreadsheetAction:Action={
     id:'create-spreadsheet',
     name:'Create Spreadsheet',
-    description:'Creates a new Google Spreadsheet',
+    description:'create spreadsheet',
+    inputSchema:{
+        title:{type:'string',description:'spreadsheet title'}
+    },
+    outputSchema:{
+        type:'object',
+        properties:{
+            spreadsheetId:{type:'string'},
+            spreadsheetUrl:{type:'string'}
+        }
+    },
     handler:async(context:ActionContext)=>{
         const input=context.inputData as CreateSpreadsheetInput
         const accessToken=context.credentialData?.accessToken as string
@@ -125,7 +180,17 @@ export const createSpreadsheetAction:Action={
 export const createSheetAction:Action={
     id:'create-sheet',
     name:'Create Sheet',
-    description:'Creates a new sheet in an existing Google Spreadsheet',
+    description:'create sheet',
+    inputSchema:{
+        spreadsheetId:{type:'string',description:'spreadsheet id'},
+        title:{type:'string',description:'sheet title'}
+    },
+    outputSchema:{
+        type:'object',
+        properties:{
+            replies:{type:'array'}
+        }
+    },
     handler:async(context:ActionContext)=>{
         const input=context.inputData as CreateSheetInput
         const accessToken=context.credentialData?.accessToken as string

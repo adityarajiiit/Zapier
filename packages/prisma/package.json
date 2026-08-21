@@ -36,7 +36,6 @@
 		"@prisma/adapter-pg": "^7.9.1",
 		"@prisma/client": "^6.19.3",
 		"@repo/crypto": "workspace:*",
-		"@repo/oauth": "workspace:*",
 		"ioredis": "^5.11.1",
 		"pg": "^8.22.0",
 		"pino": "^10.3.1",

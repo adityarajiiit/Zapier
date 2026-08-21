@@ -26,7 +26,7 @@ export const webhookRoutes=async(app:FastifyInstance)=>{
         }
         const trigger=await prisma.workflowTrigger.findUnique({
             where:{
-                webhookPath:token
+                webhookPath:`/${token}`
             },
             include:{
                 workflow:{

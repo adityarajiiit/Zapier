@@ -10,13 +10,13 @@ export interface RowData{
 export interface AddRowInput{
     spreadsheetId:string
     sheetName:string
-    values:any[]
+    values:string
 }
 
 export interface UpdateRowInput{
     spreadsheetId:string
     range:string
-    values:any[]
+    values:string
 }
 
 export interface GetRowInput{

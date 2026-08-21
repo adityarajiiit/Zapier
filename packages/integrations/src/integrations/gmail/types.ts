@@ -29,7 +29,7 @@ export interface ReplyInput{
 
 export interface AddLabelInput{
     messageId:string
-    labelIds:string[]
+    labelIds:string
 }
 
 export interface CreateDraftInput{

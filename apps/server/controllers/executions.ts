@@ -31,6 +31,9 @@ export const executionController={
                 id:request.params.id
             },
             include:{
+                workflow:{
+                    select:{userId:true}
+                },
                 stepResults:{
                     orderBy:{
                         stepOrder:'asc'
@@ -38,9 +41,9 @@ export const executionController={
                 }
             }
         })
-        if(!execution){
-            return reply.status(404).send({
-                error:'execution not found'
+        if(!execution||execution.workflow.userId!==userId){
+            return reply.status(403).send({
+                error:'forbidden'
             })
         }
         return execution

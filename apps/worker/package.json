@@ -14,7 +14,9 @@
         "@repo/integrations": "workspace:*",
         "@repo/prisma": "workspace:*",
         "@repo/crypto": "workspace:*",
-        "@repo/oauth": "workspace:*"
+        "@repo/oauth": "workspace:*",
+        "bullmq":"^6.0.9",
+        "@repo/queue": "workspace:*"
     },
     "devDependencies": {
         "@repo/typescript-config": "workspace:*",

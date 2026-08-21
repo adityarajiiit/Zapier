@@ -23,7 +23,8 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@repo/prisma": "workspace:*"
+    "@repo/prisma": "workspace:*",
+    "@repo/queue": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

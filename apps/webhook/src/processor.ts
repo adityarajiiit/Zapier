@@ -1,5 +1,5 @@
 import { prisma } from "@repo/prisma";
-
+import { stepsQueue } from "@repo/queue"
 export const createExecution=async(workflowId:string,steps:{
     id:string,
     stepOrder:number
@@ -20,7 +20,16 @@ export const createExecution=async(workflowId:string,steps:{
                     status:'PENDING'
                 }]
             }:undefined
+        },
+        include:{
+            stepResults:true
         }
     })
+    const firstStepResult=execution.stepResults?.[0]
+    if(firstStepResult){
+        await stepsQueue.add('execute-step',{
+            stepResultId:firstStepResult.id
+        },{attempts:5,backoff:{type:'exponential',delay:1000}})
+    }
     return execution
 }

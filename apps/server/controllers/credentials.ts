@@ -108,7 +108,7 @@ export const credentialController={
             })
         }
         if(credential.userId!==userId){
-            return reply.status(400).send({
+            return reply.status(403).send({
                 error:"not allowed"
             })
         }
@@ -151,7 +151,7 @@ export const credentialController={
             })
         }
         if(credential.userId!==userId){
-            return reply.status(400).send({
+            return reply.status(403).send({
                 error:"not allowed"
             })
         }

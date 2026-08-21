@@ -2,7 +2,7 @@ import { Trigger } from "../../types.js";
 export const newPushTrigger:Trigger={
     id:'new-push',
     name:'New Push',
-    description:'Triggers when a new push is made to repo',
+    description:'new push',
     triggerType:'WEBHOOK',
     outputSchema:{
         type:'object',
@@ -29,7 +29,7 @@ export const newPushTrigger:Trigger={
 export const newIssueTrigger:Trigger={
     id:'new-issue',
     name:'New Issue',
-    description:'Triggers when a new issue is created',
+    description:'new issue',
     triggerType:'WEBHOOK',
     outputSchema:{
         type:'object',
@@ -53,7 +53,7 @@ export const newIssueTrigger:Trigger={
 export const newPrTrigger:Trigger={
     id:'new-pr',
     name:'New Pull Request',
-    description:'Triggers when a new PR is opened',
+    description:'new pull request',
     triggerType:"WEBHOOK",
     outputSchema:{
         type:'object',
@@ -77,7 +77,7 @@ export const newPrTrigger:Trigger={
 export const newStarTrigger:Trigger={
     id:'new-star',
     name:'New Star',
-    description:'Triggers when a repo is starred',
+    description:'new star',
     triggerType:'WEBHOOK',
     outputSchema:{
         type:'object',
@@ -98,7 +98,7 @@ export const newStarTrigger:Trigger={
 export const issueCommentTrigger:Trigger={
     id:'issue-comment',
     name:'Issue Comment',
-    description:'Triggers when a comment is added to an issue',
+    description:'issue comment',
     triggerType:'WEBHOOK',
     outputSchema:{
         type:'object',

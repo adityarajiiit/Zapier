@@ -2,6 +2,7 @@ import { Prisma } from "@repo/prisma";
 import { prisma } from "@repo/prisma";
 import { ExecutionContext,resolvePath } from "./template.js";
 import { evaluateCondition,evaluateFilter,ConditionConfig } from "./condition.js";
+import { stepsQueue } from "@repo/queue";
 
 export interface ErrorConfig{
     onError:'stop'|'continue'|'retry'
@@ -38,66 +39,6 @@ export const buildContext=async(executionId:string)=>{
     }
 }
 
-export const claimNextStep=async(workerId:string)=>{
-    return prisma.$transaction(async(t:Prisma.TransactionClient)=>{
-        const rows=await t.$queryRaw<any>`
-        SELECT id,"execution-id","step-order","attempt-number","workflow-step-id"
-        FROM "step-results"
-        WHERE status='PENDING'
-        AND "step-order"=(
-            SELECT MIN(sr2."step-order")
-            FROM "step-results" sr2
-            WHERE sr2."execution-id"="step-results"."execution-id"
-            AND sr2.status='PENDING'
-        )
-        FOR UPDATE SKIP LOCKED
-        LIMIT 1
-        `
-        if(rows.length===0){
-            return null
-        }
-        const row=rows[0]
-        const now=new Date()
-        await t.stepResult.update({
-            where:{
-                id:row.id
-            },
-            data:{
-                status:'RUNNING',
-                startedAt:now,
-                finishedAt:null,
-                error:null,
-                attemptNumber:{
-                    increment:1
-                }
-            }
-        })
-        await t.workflowExecution.updateMany({
-            where:{
-                id:row['execution-id'],
-                status:'PENDING'
-            },
-            data:{
-                status:'RUNNING',
-                startedAt:now
-            }
-        })
-        return t.stepResult.findUnique({
-            where:{
-                id:row.id
-            },
-            include:{
-                workflowStep:{
-                    include:{
-                        action:true,
-                        credential:true
-                    }
-                },
-                execution:true
-            }
-        })
-    })
-}
 
 export const skipRemainingSteps=async(
     t:Prisma.TransactionClient,
@@ -132,7 +73,8 @@ export const skipRemainingSteps=async(
 export const completeStep=async(
     t:Prisma.TransactionClient,
     stepResultId:string,
-    outputData:any
+    outputData:any,
+    delayMs?:number
 )=>{
     const sr=await t.stepResult.findUniqueOrThrow({
         where:{
@@ -193,7 +135,7 @@ export const completeStep=async(
         }
     })
     if(nextStep){
-        await t.stepResult.create({
+        const newStepResult=await t.stepResult.create({
             data:{
                 executionId:sr.executionId,
                 workflowStepId:nextStep.id,
@@ -201,6 +143,13 @@ export const completeStep=async(
                 status:'PENDING'
             }
         })
+        await stepsQueue.add('execute-step',{
+            stepResultId:newStepResult.id
+        },
+        delayMs&&delayMs>0?{
+            delay:delayMs,attempts:5,backoff:{type:'exponential',delay:1000}
+        }:{attempts:5,backoff:{type:'exponential',delay:1000}}
+    )
     }
     else{
         await t.workflowExecution.update({
@@ -236,15 +185,10 @@ export const failStep=async(
     const maxAttempts=errorConfig?.maxAttempts||5
     if(onError==='retry'&&sr.attemptNumber<maxAttempts){
         await t.stepResult.update({
-            where:{
-                id:stepResultId
-            },
-            data:{
-                status:'PENDING',
-                error,
-                finishedAt:now
-            }
+            where:{id:stepResultId},
+            data:{status:'PENDING',error,finishedAt:now,attemptNumber:{increment:1}}
         })
+        await stepsQueue.add('execute-step',{stepResultId},{attempts:5,backoff:{type:'exponential',delay:1000}})
     }
     else if(onError==='continue'){
         await t.stepResult.update({
@@ -277,14 +221,15 @@ export const failStep=async(
             }
         })
         if(nextStep){
-            await t.stepResult.create({
+            const newStepResult=await t.stepResult.create({
                 data:{
                     executionId:sr.executionId,
                     workflowStepId:nextStep.id,
                     stepOrder:nextStep.stepOrder,
                     status:'PENDING'
                 }
-            })
+           })
+           await stepsQueue.add('execute-step',{stepResultId:newStepResult.id},{ attempts: 5, backoff: { type: 'exponential', delay: 1000 } })
         }
         else{
             await t.workflowExecution.update({

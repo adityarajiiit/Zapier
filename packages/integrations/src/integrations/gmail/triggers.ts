@@ -29,6 +29,10 @@ const fetchNewMessages=async(query:string,labelId?:string,accessToken?:string)=>
         })
         if(msgRes.ok){
             const msgData=await msgRes.json()
+            const subjectHeader=msgData.payload?.headers?.find((h:any)=>h.name==='Subject')
+            const fromHeader=msgData.payload?.headers?.find((h:any)=>h.name==='From')
+            msgData.subject=subjectHeader?subjectHeader.value:''
+            msgData.from=fromHeader?fromHeader.value:''
             results.push(msgData)
         }
     }
@@ -52,6 +56,12 @@ export const newEmailTrigger:Trigger={
                 type:'string'
             },
             snippet:{
+                type:'string'
+            },
+            subject:{
+                type:'string'
+            },
+            from:{
                 type:'string'
             },
             payload:{
@@ -81,6 +91,12 @@ export const newLabeledEmailTrigger:Trigger={
             snippet:{
                 type:'string'
             },
+            subject:{
+                type:'string'
+            },
+            from:{
+                type:'string'
+            },
             payload:{
                 type:'object'
             }
@@ -107,6 +123,12 @@ export const newAttachmentTrigger:Trigger={
                 type:'string'
             },
             snippet:{
+                type:'string'
+            },
+            subject:{
+                type:'string'
+            },
+            from:{
                 type:'string'
             },
             payload:{

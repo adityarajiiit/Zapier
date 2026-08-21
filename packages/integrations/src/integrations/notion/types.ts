@@ -23,18 +23,20 @@ export interface NotionBlock{
 
 export interface CreatePageInput{
     parentId:string
-    properties:Record<string,any>
-    children?:any[]
+    title:string
+    content?:string
 }
 
 export interface UpdatePageInput{
     pageId:string
-    properties:Record<string,any>
+    title?:string
+    content?:string
 }
 
 export interface AddToDatabaseInput{
     databaseId:string
-    properties:Record<string,any>
+    name?:string
+    content?:string
 }
 
 export interface SearchInput{
@@ -57,5 +59,5 @@ export interface CreateDatabaseInput{
 
 export interface AppendBlockInput{
     pageId:string
-    children:any[]
+    content:string
 }

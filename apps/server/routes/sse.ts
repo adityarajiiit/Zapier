@@ -3,7 +3,18 @@ import{FastifyInstance} from "fastify"
 
 export const sseRoutes=async(app:FastifyInstance)=>{
     app.get('/:id/stream',async(request:any,reply:any)=>{
+        const userId=request.userId
+        if(!userId){
+            return reply.status(401).send({error:'unauthorized'})
+        }
         const{id}=request.params
+        const owned=await prisma.workflowExecution.findUnique({
+            where:{id},
+            include:{workflow:{select:{userId:true}}}
+        })
+        if(!owned||owned.workflow.userId!==userId){
+            return reply.status(403).send({error:'forbidden'})
+        }
         reply.raw.setHeader('Content-Type','text/event-stream')
         reply.raw.setHeader('Cache-Control','no-cache')
         reply.raw.setHeader('Connection','keep-alive')

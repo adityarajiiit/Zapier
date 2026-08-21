@@ -9,7 +9,7 @@ const headers=(accessToken:string)=>({
 export const newDatabaseItemTrigger:Trigger={
     id:'new-database-item',
     name:'New Database Item',
-    description:'Triggers when a new item is added to a Notion database',
+    description:'new database item',
     triggerType:'POLLING',
     outputSchema:{
         type:'object',
@@ -52,7 +52,7 @@ export const newDatabaseItemTrigger:Trigger={
 export const updatedPageTrigger:Trigger={
     id:'updated-page',
     name:'Updated Page',
-    description:'Triggers when a page is updated in Notion',
+    description:'updated page',
     triggerType:'POLLING',
     outputSchema:{
         type:'object',

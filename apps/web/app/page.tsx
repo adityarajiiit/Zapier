@@ -1,17 +1,36 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-export default function Home() {
-  const session=useSession()
-  const router=useRouter()
-  useEffect(()=>{
-    if(session.status=="unauthenticated"){
-      router.push("/login")
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, Suspense } from "react";
+import { toast } from "sonner";
+
+function HomeContent() {
+  const session = useSession()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const error = searchParams.get('error')
+    const connected = searchParams.get('connected')
+    if (error) {
+      toast.error(decodeURIComponent(error))
     }
-    else if(session.status=="authenticated"){
-      router.push("/dashboard")
+    if (connected === 'true') {
+      toast.success('Integration connected successfully')
     }
-  },[session])
+    if (session.status === 'unauthenticated') {
+      router.push('/login')
+
+    } else if (session.status === 'authenticated') {
+      router.push('/dashboard/integrations')
+    }
+  }, [session, searchParams])
   return null
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
+  )
 }

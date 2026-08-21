@@ -104,6 +104,20 @@ export interface CreateCredentialPayload{
     bearerToken?:string
 }
 
+export interface RequiredField{
+    stepId:string
+    stepName:string
+    stepOrder:number
+    fieldKey:string
+    fieldLabel:string
+}
+
+export interface GenerateWorkflowResult{
+    workflowId:string
+    requiredFields:RequiredField[]
+}
+
+
 export const api=createApi({
     reducerPath:"api",
     baseQuery:fetchBaseQuery({
@@ -250,7 +264,16 @@ export const api=createApi({
                 method:'DELETE',
             }),
             invalidatesTags:['Credentials']
-        })
+        }),
+        generateWorkflow:builder.mutation<GenerateWorkflowResult,{prompt:string}>({
+            query:(body)=>({
+                url:'/workflows/generate',
+                method:'POST',
+                body
+            }),
+            invalidatesTags:['Workflows']
+        }),
+
     })
 })
 
@@ -274,5 +297,6 @@ export const{
     useUpdateStepMutation,
     useDeleteStepMutation,
     useReorderStepsMutation,
-    useSyncWorkflowMutation
+    useSyncWorkflowMutation,
+    useGenerateWorkflowMutation
 }=api

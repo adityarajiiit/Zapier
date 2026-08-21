@@ -47,11 +47,8 @@ export const executeStep=async(stepResult:any,workerId:string)=>{
 
         if(stepType==='DELAY'){
             const delayMs=Number(step.input?.delayMs||0)
-            if(delayMs>0){
-                await new Promise((resolve)=>setTimeout(resolve,delayMs))
-            }
             await prisma.$transaction(async(t)=>{
-                await completeStep(t,stepResult.id,{delayMs})
+                await completeStep(t,stepResult.id,{delayMs},delayMs)
             })
             return
         }
@@ -86,10 +83,7 @@ export const executeStep=async(stepResult:any,workerId:string)=>{
                     data:{
                         status:'PENDING',
                         startedAt:null,
-                        error:`Rate limit exceeded`,
-                        attemptNumber:{
-                            decrement:1
-                        }
+                        error:`Rate limit exceeded`
                     }
                 })
                 return

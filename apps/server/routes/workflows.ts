@@ -1,7 +1,7 @@
 import { workflowController } from "../controllers/workflows.js";
 import { FastifyInstance } from "fastify";
-
-export default async function workflowRoutes(app:FastifyInstance){
+import{aiWorkflowController} from "../controllers/ai.js";
+export default async function workflowRoutes(app: FastifyInstance) {
     app.get('/',async(request,reply)=>workflowController.getAll(request,reply))
     app.get('/:id',async(request,reply)=>workflowController.getWorkflow(request,reply))
     app.post('/',async(request,reply)=>workflowController.newWorkflow(request,reply))
@@ -17,4 +17,5 @@ export default async function workflowRoutes(app:FastifyInstance){
     app.put('/:id/sync',async(request,reply)=>workflowController.syncWorkflow(request,reply))
     app.post('/:id/webhook/regenerate',async(request,reply)=>workflowController.regenerateWebhook(request,reply))
     app.get('/:id/webhook/list',async(request,reply)=>workflowController.getWebhook(request,reply))
+    app.post('/generate',async(request,reply)=>aiWorkflowController.generateWorkflow(request,reply))
 }

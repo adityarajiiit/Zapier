@@ -66,8 +66,8 @@ export interface CreateIssueInput{
     repo:string
     title:string
     body?:string
-    labels?:string[]
-    assignees?:string[]
+    labels?:string
+    assignees?:string
 }
 
 export interface CreateCommentInput{
@@ -90,7 +90,7 @@ export interface AddLabelInput{
     owner:string
     repo:string
     issueNumber:number
-    labels:string[]
+    labels:string
 }
 
 export interface CreateRepoInput{

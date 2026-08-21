@@ -1,5 +1,4 @@
 export {
-    claimNextStep,
     completeStep,
     failStep,
     resolveInput,
