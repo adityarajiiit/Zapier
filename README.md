@@ -358,30 +358,30 @@ The database contains **17 models** organized around the core domain:
 erDiagram
     User ||--o{ Workflow : owns
     User ||--o{ Credential : stores
-    User ||--o{ Account : "signs in via"
+    User ||--o{ Account : has
     User ||--o{ Session : has
 
-    Workflow ||--|| WorkflowTrigger : "triggered by"
+    Workflow ||--o| WorkflowTrigger : "started by"
     Workflow ||--o{ WorkflowStep : contains
     Workflow ||--o{ WorkflowExecution : runs
-    Workflow ||--o| CronSchedule : "scheduled via"
+    Workflow ||--o| CronSchedule : "scheduled by"
 
     WorkflowTrigger }o--|| Trigger : references
     WorkflowTrigger ||--o{ Webhook : receives
-    WorkflowTrigger }o--o| Credential : "authenticated by"
+    WorkflowTrigger }o--o| Credential : "uses"
 
     WorkflowStep }o--o| Action : performs
     WorkflowStep }o--o| Credential : uses
     WorkflowStep ||--o{ StepResult : produces
 
     WorkflowExecution ||--o{ StepResult : contains
-    WorkflowExecution ||--o{ Webhook : "initiated by"
+    WorkflowExecution ||--o{ Webhook : logs
 
     Integration ||--o{ Trigger : offers
     Integration ||--o{ Action : provides
-    Integration ||--o{ Credential : "authenticated via"
+    Integration ||--o{ Credential : "linked to"
     Integration ||--o| OAuthConfig : "configured with"
-    Integration ||--o| RateLimitConfig : "rate-limited by"
+    Integration ||--o| RateLimitConfig : "limited by"
 
     User {
         string id PK
@@ -400,7 +400,7 @@ erDiagram
     WorkflowStep {
         string id PK
         string workflowId FK
-        StepType stepType "ACTION | CONDITION | FILTER | DELAY"
+        string stepType "ACTION, CONDITION, FILTER, DELAY"
         int stepOrder
         json input
     }
@@ -408,7 +408,7 @@ erDiagram
     WorkflowTrigger {
         string id PK
         string workflowId FK
-        TriggerType type "WEBHOOK | POLLING | CRON"
+        string triggerType "WEBHOOK, POLLING, CRON"
         string webhookPath
         string webhookSecret
     }
@@ -416,7 +416,7 @@ erDiagram
     WorkflowExecution {
         string id PK
         string workflowId FK
-        ExecutionStatus status "PENDING | RUNNING | COMPLETED | FAILED | CANCELLED"
+        string status "PENDING, RUNNING, COMPLETED, FAILED"
         datetime startedAt
         datetime finishedAt
     }
@@ -424,7 +424,7 @@ erDiagram
     StepResult {
         string id PK
         string executionId FK
-        StepStatus status "PENDING | RUNNING | COMPLETED | FAILED | SKIPPED"
+        string status "PENDING, RUNNING, COMPLETED, FAILED, SKIPPED"
         json output
         string leaseOwner
     }
@@ -432,14 +432,14 @@ erDiagram
     Credential {
         string id PK
         string userId FK
-        AuthType authType "OAUTH2 | APIKEY | TOKEN | NONE"
+        string authType "OAUTH2, APIKEY, TOKEN, NONE"
         string encryptedData
     }
 
     Integration {
         string id PK
         string name
-        AuthType authType
+        string authType
     }
 ```
 
