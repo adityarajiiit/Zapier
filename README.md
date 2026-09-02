@@ -585,7 +585,6 @@ The Docker Compose stack includes:
 | Variable | Required | Description | How to Generate |
 |----------|----------|-------------|-----------------|
 | `ENCRYPTION_KEY` | Yes | 64 hex chars (32 bytes) for AES-256-GCM credential encryption | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-| `PREVIOUS_ENCRYPTION_KEY` | No | Old key during rotation window | Same as above |
 | `AUTH_SECRET` | Yes | 64 hex chars - signs JWT sessions and API bearer tokens | Same as above |
 
 ### Service URLs
