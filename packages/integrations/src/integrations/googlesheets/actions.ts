@@ -8,6 +8,8 @@ import{
    CreateSheetInput
 } from './types.js'
 
+const enc=(v:any)=>encodeURIComponent(String(v||''))
+
 const url='https://sheets.googleapis.com/v4/spreadsheets'
 const headers=(accessToken?:string)=>({
     'Content-Type':'application/json',
@@ -32,7 +34,7 @@ export const addRowAction:Action={
     handler:async(context:ActionContext)=>{
         const input=context.inputData as AddRowInput
         const accessToken=context.credentialData?.accessToken as string
-        const res=await fetch(`${url}/${input.spreadsheetId}/values/${input.sheetName}:append?valueInputOption=USER_ENTERED`,{
+        const res=await fetch(`${url}/${enc(input.spreadsheetId)}/values/${enc(input.sheetName)}:append?valueInputOption=RAW`,{
             method:'POST',
             headers:headers(accessToken),
             body:JSON.stringify({
@@ -64,7 +66,7 @@ export const updateRowAction:Action={
     handler:async(context:ActionContext)=>{
         const input=context.inputData as UpdateRowInput
         const accessToken=context.credentialData?.accessToken as string
-        const res=await fetch(`${url}/${input.spreadsheetId}/values/${input.range}?valueInputOption=USER_ENTERED`,{
+        const res=await fetch(`${url}/${enc(input.spreadsheetId)}/values/${enc(input.range)}?valueInputOption=RAW`,{
             method:'PUT',
             headers:headers(accessToken),
             body:JSON.stringify({
@@ -97,7 +99,7 @@ export const getRowAction:Action={
         const input=context.inputData as GetRowInput
         const accessToken=context.credentialData?.accessToken as string
         const range=`${input.sheetName}!A${input.rowNumber}:ZZ${input.rowNumber}`
-        const res=await fetch(`${url}/${input.spreadsheetId}/values/${range}`,{
+        const res=await fetch(`${url}/${enc(input.spreadsheetId)}/values/${enc(range)}`,{
             method:'GET',
             headers:headers(accessToken),
         })
@@ -127,7 +129,7 @@ export const searchRowsAction:Action={
     handler:async(context:ActionContext)=>{
         const input=context.inputData as SearchRowsInput
         const accessToken=context.credentialData?.accessToken
-        const res=await fetch(`${url}/${input.spreadsheetId}/values/${input.sheetName}`,{
+        const res=await fetch(`${url}/${enc(input.spreadsheetId)}/values/${enc(input.sheetName)}`,{
             method:'GET',
             headers:headers(accessToken),
         })
@@ -194,7 +196,7 @@ export const createSheetAction:Action={
     handler:async(context:ActionContext)=>{
         const input=context.inputData as CreateSheetInput
         const accessToken=context.credentialData?.accessToken as string
-        const res=await fetch(`${url}/${input.spreadsheetId}:batchUpdate`,{
+        const res=await fetch(`${url}/${enc(input.spreadsheetId)}:batchUpdate`,{
             method:'POST',
             headers:headers(accessToken),
             body:JSON.stringify({

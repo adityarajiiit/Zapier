@@ -1,4 +1,6 @@
 import{Trigger,TriggerContext}from '../../types.js'
+
+const enc=(v:any)=>encodeURIComponent(String(v||''))
 const url='https://api.notion.com/v1'
 const headers=(accessToken:string)=>({
     'Authorization':`Bearer ${accessToken}`,
@@ -34,7 +36,7 @@ export const newDatabaseItemTrigger:Trigger={
                 }
             }
         }
-        const res=await fetch(`${url}/databases/${databaseId}/query`,{
+        const res=await fetch(`${url}/databases/${enc(databaseId)}/query`,{
             method:'POST',
             headers:headers(accessToken),
             body:JSON.stringify({

@@ -1,5 +1,7 @@
 import{Action,ActionContext} from'../../types.js'
 import { CreateIssueInput,CreateCommentInput,CreatePrInput,AddLabelInput,CreateRepoInput,ListReposInput } from './types.js'
+
+const enc=(v:any)=>encodeURIComponent(String(v||''))
 const url='https://api.github.com'
 
 const headers=(accessToken?:string)=>({
@@ -32,7 +34,7 @@ export const createIssueAction:Action={
     handler:async(context:ActionContext)=>{
         const input=context.inputData as CreateIssueInput
         const accessToken=context.credentialData?.accessToken
-        const res=await fetch(`${url}/repos/${input.owner}/${input.repo}/issues`,{
+        const res=await fetch(`${url}/repos/${enc(input.owner)}/${enc(input.repo)}/issues`,{
             method:'POST',
             headers:headers(accessToken),
             body:JSON.stringify({
@@ -69,7 +71,7 @@ export const createCommentAction:Action={
     handler:async(context:ActionContext)=>{
         const input=context.inputData as CreateCommentInput
         const accessToken=context.credentialData?.accessToken
-        const res=await fetch(`${url}/repos/${input.owner}/${input.repo}/issues/${input.issueNumber}/comments`,{
+        const res=await fetch(`${url}/repos/${enc(input.owner)}/${enc(input.repo)}/issues/${enc(input.issueNumber)}/comments`,{
             method:'POST',
             headers:headers(accessToken),
             body:JSON.stringify({
@@ -108,7 +110,7 @@ export const createPrAction:Action={
     handler:async(context:ActionContext)=>{
         const input=context.inputData as CreatePrInput
         const accessToken=context.credentialData?.accessToken
-        const res=await fetch(`${url}/repos/${input.owner}/${input.repo}/pulls`,{
+        const res=await fetch(`${url}/repos/${enc(input.owner)}/${enc(input.repo)}/pulls`,{
             method:'POST',
             headers:headers(accessToken),
             body:JSON.stringify({
@@ -145,7 +147,7 @@ export const addLabelAction:Action={
     handler:async(context:ActionContext)=>{
         const input=context.inputData as AddLabelInput
         const accessToken=context.credentialData?.accessToken
-        const res=await fetch(`${url}/repos/${input.owner}/${input.repo}/issues/${input.issueNumber}/labels`,{
+        const res=await fetch(`${url}/repos/${enc(input.owner)}/${enc(input.repo)}/issues/${enc(input.issueNumber)}/labels`,{
             method:'POST',
             headers:headers(accessToken),
             body:JSON.stringify({

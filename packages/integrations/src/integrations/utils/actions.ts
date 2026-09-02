@@ -1,4 +1,5 @@
 import{Action,ActionContext} from '../../types.js'
+import{safeFetch} from '../../utils/safe-fetch.js'
 export const delayAction:Action={
     id:'delay',
     name:'Delay',
@@ -42,20 +43,21 @@ export const httpRequestAction:Action={
         if(!url){
             throw new Error('url required')
         }
+        const upper=String(method).toUpperCase()
         const options:RequestInit={
-            method,
+            method:upper,
             headers:headers as Record<string,string>
         }
-        if(body&&method!=='GET'&&method!=='HEAD'){
+        if(body&&upper!=='GET'&&upper!=='HEAD'){
             options.body=typeof body==='string'?body:JSON.stringify(body)
         }
-        const res=await fetch(url,options)
+        const{res,body:text}=await safeFetch(url,options)
         let data
         try{
-            data=await res.json()
+            data=JSON.parse(text)
         }
         catch(e){
-            data=await res.text()
+            data=text
         }
         return{
             status:res.status,

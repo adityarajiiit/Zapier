@@ -20,3 +20,4 @@ integration.register(integrationGemini)
 integration.register(integrationUtils)
 export {integration}
 export {checkRateLimit}
+export {safeFetch,isBlockedAddress} from './utils/safe-fetch.js'

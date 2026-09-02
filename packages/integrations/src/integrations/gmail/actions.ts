@@ -7,25 +7,38 @@ import{
     SearchInput
 } from './types.js'
 
+const enc=(v:any)=>encodeURIComponent(String(v||''))
+
 const url='https://gmail.googleapis.com/gmail/v1'
 const headers=(accessToken?:string)=>({
     'Authorization':`Bearer ${accessToken}`,
     'Content-Type':'application/json'
 })
 
+const headerValue=(value:string)=>String(value||'').replace(/[\r\n]+/g,' ').trim()
+
+const headerName=(name:string)=>{
+    const clean=String(name||'').trim()
+    if(!/^[A-Za-z0-9-]+$/.test(clean)){
+        throw new Error(`invalid email header name: ${name}`)
+    }
+    return clean
+}
+
 const email=(to:string,subject:string,body:string,isHtml:boolean=false,cc?:string,bcc?:string,customHeaders:Record<string,string>={})=>{
-    let email=`To: ${to}\r\n`
-    email+=`Subject: ${subject}\r\n`
+    let email=`To: ${headerValue(to)}\r\n`
+    email+=`Subject: ${headerValue(subject)}\r\n`
     if(cc){
-        email+=`Cc:${cc}\r\n`
+        email+=`Cc: ${headerValue(cc)}\r\n`
     }
     if(bcc){
-        email+=`Bcc:${bcc}\r\n`
+        email+=`Bcc: ${headerValue(bcc)}\r\n`
     }
     for(const[k,v] of Object.entries(customHeaders)){
-        email+=`${k}:${v}\r\n`
+        email+=`${headerName(k)}: ${headerValue(v)}\r\n`
     }
-    email+=`Content-Type:${isHtml?'text/html':'text/plain'}`
+    email+=`Content-Type: ${isHtml?'text/html':'text/plain'}; charset="UTF-8"\r\n`
+    email+=`MIME-Version: 1.0\r\n\r\n`
     email+=body
     return Buffer.from(email).toString('base64url')
 }
@@ -121,7 +134,7 @@ export const addLabelAction:Action={
     handler:async(context:ActionContext)=>{
         const input=context.inputData as AddLabelInput
         const accessToken=context.credentialData?.accessToken
-        const res=await fetch(`${url}/users/me/messages/${input.messageId}/modify`,{
+        const res=await fetch(`${url}/users/me/messages/${enc(input.messageId)}/modify`,{
             method:'POST',
             headers:headers(accessToken),
             body:JSON.stringify({
@@ -198,7 +211,7 @@ export const searchEmailsAction:Action={
         const messages=[]
         if(data.messages&&data.messages.length>0){
             for(const msg of data.messages){
-                const msgRes=await fetch(`${url}/users/me/messages/${msg.id}`,{
+                const msgRes=await fetch(`${url}/users/me/messages/${enc(msg.id)}`,{
                     method:'GET',
                     headers:headers(accessToken),
                 })

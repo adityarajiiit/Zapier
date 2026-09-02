@@ -7,9 +7,11 @@ import{
     TransformTextInput
 } from'./types.js'
 
-const geminimodel='gemini-3.6-flash'
+const geminimodel=process.env.GEMINI_MODEL||'gemini-3.6-flash'
 
 const url='https://generativelanguage.googleapis.com/v1beta/models'
+
+const enc=(v:any)=>encodeURIComponent(String(v||''))
 
 const callGemini=async(apiKey:string,model:string,prompt:string,systemInstructions?:string)=>{
     const body:any={
@@ -24,18 +26,33 @@ const callGemini=async(apiKey:string,model:string,prompt:string,systemInstructio
             parts:[{text:systemInstructions}]
         }
     }
-    const res=await fetch(`${url}/${model}:generateContent?key=${apiKey}`,{
-        method:'POST',
-        headers:{
-            'Content-Type':'application/json'
-        },
-        body:JSON.stringify(body)
-    })
+    const controller=new AbortController()
+    const timer=setTimeout(()=>controller.abort(),60000)
+    let res:Response
+    try{
+        res=await fetch(`${url}/${enc(model)}:generateContent`,{
+            method:'POST',
+            headers:{
+                'Content-Type':'application/json',
+                'x-goog-api-key':apiKey
+            },
+            signal:controller.signal,
+            body:JSON.stringify(body)
+        })
+    }
+    finally{
+        clearTimeout(timer)
+    }
     if(!res.ok){
-        throw new Error(`${res.status}`)
+        throw new Error(`gemini responded ${res.status}`)
     }
     const data=await res.json()
-    return data.candidates[0].content.parts[0].text||''
+    const text=data?.candidates?.[0]?.content?.parts?.[0]?.text
+    if(typeof text!=='string'){
+        const reason=data?.candidates?.[0]?.finishReason||data?.promptFeedback?.blockReason
+        throw new Error(reason?`gemini returned no content (${reason})`:'gemini returned no content')
+    }
+    return text
 }
 
 export const generateTextAction:Action={

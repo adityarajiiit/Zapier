@@ -11,12 +11,18 @@ export interface ActionContext{
 export interface TriggerContext{
     credentialData?:Record<string,any>
     config?:Record<string,any>
+    cursor?:Record<string,any>
     lastFiredAt?:Date|null
+}
+
+export interface TriggerResult{
+    items:Record<string,any>[]
+    cursor?:Record<string,any>
 }
 
 export type ActionHandler=(context:ActionContext)=>Promise<Record<string,any>|void>
 
-export type TriggerHandler=(context:TriggerContext)=>Promise<Record<string,any>[]>
+export type TriggerHandler=(context:TriggerContext)=>Promise<Record<string,any>[]|TriggerResult>
 
 export interface Action{
     id:string

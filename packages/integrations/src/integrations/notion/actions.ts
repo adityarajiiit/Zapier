@@ -8,6 +8,8 @@ import{
     AppendBlockInput
 } from './types.js'
 
+const enc=(v:any)=>encodeURIComponent(String(v||''))
+
 const url='https://api.notion.com/v1'
 
 const headers=(accessToken:string)=>({
@@ -161,7 +163,7 @@ export const updatePageAction:Action={
                 rich_text:[{type:'text',text:{content:input.content}}]
             }
         }
-        const res=await fetch(`${url}/pages/${input.pageId}`,{
+        const res=await fetch(`${url}/pages/${enc(input.pageId)}`,{
             method:'PATCH',
             headers:headers(accessToken),
             body:JSON.stringify({properties})
@@ -278,7 +280,7 @@ export const appendBlockAction:Action={
                 }
             }
         ]
-        const res=await fetch(`${url}/blocks/${input.pageId}/children`,{
+        const res=await fetch(`${url}/blocks/${enc(input.pageId)}/children`,{
             method:'PATCH',
             headers:headers(accessToken),
             body:JSON.stringify({
